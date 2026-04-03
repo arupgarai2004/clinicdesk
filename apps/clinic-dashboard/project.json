@@ -20,7 +20,7 @@
             "input": "apps/clinic-dashboard/public"
           }
         ],
-        "styles": ["apps/clinic-dashboard/src/styles.css"]
+        "styles": ["apps/clinic-dashboard/src/styles.scss"]
       },
       "configurations": {
         "production": {

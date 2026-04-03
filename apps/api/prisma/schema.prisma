@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")   // pooled — runtime
+  directUrl = env("DIRECT_URL")     // direct — migrations only
+}
+
+// ── Clinic ──────────────────────────────────────────────────────────────
+model Clinic {
+  id           String         @id @default(cuid())
+  name         String
+  email        String         @unique
+  timezone     String         @default("Europe/Amsterdam")
+  workingHours Json           // { mon:{start:'09:00',end:'17:00'}, ... }
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  appointments Appointment[]
+  availability Availability[]
+}
+
+// ── Appointment ──────────────────────────────────────────────────────────
+model Appointment {
+  id           String      @id @default(cuid())
+  clinic       Clinic      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId     String
+
+  patientName  String
+  patientEmail String
+  reason       String
+  startTime    DateTime
+  endTime      DateTime
+  status       AppStatus   @default(PENDING)
+  cancelToken  String?     @unique   // signed token for email cancel link
+  aiSuggestion Json?       // { suggestedDuration: 30, prepNotes: '...' }
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([clinicId, startTime])   // fast calendar queries
+  @@index([clinicId, status])      // fast status filter
+}
+
+// ── Availability ─────────────────────────────────────────────────────────
+model Availability {
+  id        String @id @default(cuid())
+  clinic    Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId  String
+
+  dayOfWeek Int    // 0=Sun 1=Mon ... 6=Sat
+  startTime String // '09:00'
+  endTime   String // '17:00'
+  isOpen    Boolean @default(true)
+
+  @@unique([clinicId, dayOfWeek])   // one row per day per clinic
+}
+
+// ── Enum ──────────────────────────────────────────────────────────────────
+enum AppStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
