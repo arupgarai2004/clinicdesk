@@ -1,18 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class AppointmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService)
+    private readonly prisma: PrismaService,
+  ) {}
 
   // ── List with optional filters ──────────────────────────────────────────
-  async findAll(clinicId: string, filters: {
+  async findAll(clinicId?: string, filters: {
     date?:   string;   // 'YYYY-MM-DD'
     status?: AppStatus;
     search?: string;
-  }) {
-    const where: Prisma.AppointmentWhereInput = { clinicId };
+  } = {}) {
+    const where: Prisma.AppointmentWhereInput = clinicId ? { clinicId } : {};
 
     if (filters.date) {
       const day   = new Date(filters.date);
@@ -31,10 +34,9 @@ export class AppointmentsService {
       ];
     }
 
-    return this.prisma.appointment.findMany({
-      where,
-      orderBy: { startTime: 'asc' },
-    });
+    const appointments = await this.prisma.appointment.findMany({ where, orderBy: { startTime: 'asc' } });
+    console.log('Appointments query', { where, count: appointments.length });
+    return appointments;
   }
 
   // ── Single appointment ──────────────────────────────────────────────────
