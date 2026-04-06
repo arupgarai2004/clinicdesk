@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppStatus, Prisma } from '@prisma/client';
+import { AppointmentFilters } from './appointments.types';
 
 @Injectable()
 export class AppointmentsService {
@@ -10,11 +11,7 @@ export class AppointmentsService {
   ) {}
 
   // ── List with optional filters ──────────────────────────────────────────
-  async findAll(clinicId?: string, filters: {
-    date?:   string;   // 'YYYY-MM-DD'
-    status?: AppStatus;
-    search?: string;
-  } = {}) {
+  async findAll(clinicId?: string, filters: AppointmentFilters = {}) {
     const where: Prisma.AppointmentWhereInput = clinicId ? { clinicId } : {};
 
     if (filters.date) {
