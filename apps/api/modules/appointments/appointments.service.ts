@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppStatus, Prisma } from '@prisma/client';
-import { AppointmentFilters } from './appointments.types';
+import { AppointmentFilters } from '@org/models';
 
 @Injectable()
 export class AppointmentsService {

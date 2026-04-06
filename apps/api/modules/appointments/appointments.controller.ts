@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Inject, Put, Post } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { AppStatus, Prisma } from '@prisma/client';
-import { AppointmentFilters, AppointmentQuery } from './appointments.types';
+import { AppointmentFilters, AppointmentQuery } from '@org/models';
 
 @Controller('appointments')
 export class AppointmentsController {
