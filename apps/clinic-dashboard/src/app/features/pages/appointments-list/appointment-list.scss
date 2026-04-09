@@ -1,0 +1,22 @@
+.appointments-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 2fr 2fr 1fr;
+    padding: 8px 12px;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+
+    &.header {
+      background-color: #f0f0f0;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+  }
+}

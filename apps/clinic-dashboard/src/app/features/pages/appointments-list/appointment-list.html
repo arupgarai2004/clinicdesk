@@ -1,1 +1,33 @@
-<p>appointment-list works!</p>
+@if (appointmentStore.loading()) {
+<div class="info loading">Loading...</div>
+}
+
+@if (appointmentStore.error()) {
+<div class="info error">{{ appointmentStore.error() }}</div>
+}
+
+@if (appointmentList().length > 0) {
+<div class="appointments-table">
+    <!-- Header -->
+    <div class="row header">
+        <div>ID</div>
+        <div>Clinic ID</div>
+        <div>Date</div>
+        <div>Status</div>
+    </div>
+
+    <!-- Rows -->
+    @for (appt of appointmentList(); track appt.id) {
+    <div class="row">
+        <div>{{ appt.id }}</div>
+        <div>{{ appt.clinicId }}</div>
+        <div>{{ appt.patientName }}</div>
+        <div>{{ appt.reason }}</div>
+    </div>
+    }
+</div>
+} @else if (!appointmentStore.loading()) {
+
+<div class="info no-data">No data found</div>
+
+}

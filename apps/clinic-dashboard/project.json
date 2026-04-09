@@ -8,7 +8,9 @@
   "targets": {
     "build": {
       "executor": "@angular-devkit/build-angular:browser",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/apps/clinic-dashboard/browser",
         "index": "apps/clinic-dashboard/src/index.html",
@@ -20,7 +22,9 @@
             "input": "apps/clinic-dashboard/public"
           }
         ],
-        "styles": ["apps/clinic-dashboard/src/styles.scss"]
+        "styles": [
+          "apps/clinic-dashboard/src/styles.scss"
+        ]
       },
       "configurations": {
         "production": {
@@ -52,6 +56,9 @@
     "serve": {
       "continuous": true,
       "executor": "@angular-devkit/build-angular:dev-server",
+      "options": {
+        "proxyConfig": "apps/clinic-dashboard/proxy.conf.json"
+      },
       "configurations": {
         "production": {
           "buildTarget": "clinic-dashboard:build:production"
@@ -81,7 +88,9 @@
       }
     },
     "server": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "executor": "@angular-devkit/build-angular:server",
       "options": {
         "outputPath": "dist/apps/clinic-dashboard/server",
@@ -120,7 +129,9 @@
     "prerender": {
       "executor": "@angular-devkit/build-angular:prerender",
       "options": {
-        "routes": ["/"]
+        "routes": [
+          "/"
+        ]
       },
       "configurations": {
         "development": {

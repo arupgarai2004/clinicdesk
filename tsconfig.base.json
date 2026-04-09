@@ -15,8 +15,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@org/api/products": ["libs/api/products/src/index.ts"],
+      "@org/api": ["libs/api/src/index.ts"],
       "@org/models": ["libs/shared/models/src/index.ts"],
+      "@org/data-access": ["libs/data-access/src/index.ts"]
      
     }
   },

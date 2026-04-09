@@ -24,3 +24,9 @@ export interface Appointment {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface AppointmentState {
+  appointments: Appointment[];
+  loading: boolean;
+  error: string | null;
+}
