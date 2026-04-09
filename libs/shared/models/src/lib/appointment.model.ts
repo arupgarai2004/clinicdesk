@@ -1,4 +1,5 @@
-import { AppStatus } from '@prisma/client';
+
+export type AppStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 
 export interface AppointmentFilters {
   date?:   string;   // 'YYYY-MM-DD'
