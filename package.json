@@ -2,7 +2,9 @@
   "name": "@org/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "postinstall": "prisma generate --schema=apps/api/prisma/schema.prisma"
+  },
   "prisma": {
     "seed": "ts-node apps/api/prisma/seed.ts"
   },

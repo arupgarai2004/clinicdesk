@@ -2,40 +2,61 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main, develop]
   pull_request:
-
-permissions:
-  actions: read
-  contents: read
+    branches: [main]
 
 jobs:
-  main:
+  build:
+    name: Lint, Typecheck, Test & Build
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          filter: tree:0
           fetch-depth: 0
 
-      # This enables task distribution via Nx Cloud
-      # Run this command as early as possible, before dependencies are installed
-      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
-      - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="e2e"
-
-      # Cache node_modules
-      - uses: actions/setup-node@v4
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
 
-      - run: npm ci
-      - run: npx playwright install --only-shell
+      - name: Cache NX
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: nx-${{ hashFiles('package-lock.json') }}-
 
-      # Prepend any command with "nx record --" to record its logs to Nx Cloud
-      - run: npx nx record -- echo Hello World
-      - run: npx nx run-many -t lint typecheck test build --exclude='*-e2e'
-      # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
-      - run: npx nx fix-ci
-        if: always()
+      - name: Install dependencies
+        run: npm ci
+
+      # CRITICAL — must be before typecheck and build
+      - name: Generate Prisma Client
+        working-directory: apps/api
+        env:
+          DATABASE_URL: "postgresql://fake:fake@localhost:5432/fake"
+          DIRECT_URL: "postgresql://fake:fake@localhost:5432/fake"
+        run: npx prisma generate
+
+      - name: Verify NX graph
+        run: npx nx show projects --verbose
+
+      - name: Lint
+        run: npx nx run-many -t lint --exclude='*-e2e' --parallel=5 --verbose
+
+      - name: Typecheck
+        run: npx nx run-many -t typecheck --exclude='*-e2e' --parallel=3 --verbose
+
+      - name: Test
+        run: npx nx run-many -t test --exclude='*-e2e' --parallel=3 --verbose
+
+      - name: Build
+        run: npx nx run-many -t build --exclude='*-e2e' --parallel=3 --verbose
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
