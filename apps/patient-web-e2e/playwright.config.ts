@@ -2,11 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 import { nxE2EPreset } from '@nx/playwright/preset';
 import { workspaceRoot } from '@nx/devkit';
 
-// For CI, you may want to set BASE_URL to the deployed application.
 const baseURL = process.env['BASE_URL'] || 'http://localhost:3000';
 
 export default defineConfig({
-  ...nxE2EPreset({ testDir: './src' }), // ✅ FIXED (removed __filename)
+  // __dirname = absolute path to apps/patient-web-e2e/
+  // nxE2EPreset uses it to resolve testDir relative to this file
+  ...nxE2EPreset(__dirname, { testDir: './src' }),
 
   use: {
     baseURL,
@@ -21,17 +22,8 @@ export default defineConfig({
   },
 
   projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox',  use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit',   use: { ...devices['Desktop Safari'] } },
   ],
 });
