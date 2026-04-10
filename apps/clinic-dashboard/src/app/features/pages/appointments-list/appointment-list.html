@@ -7,27 +7,22 @@
 }
 
 @if (appointmentList().length > 0) {
-<div class="appointments-table">
-    <!-- Header -->
-    <div class="row header">
-        <div>ID</div>
-        <div>Clinic ID</div>
-        <div>Date</div>
-        <div>Status</div>
-    </div>
+<div class="row header">
+    <div>ID</div>
+    <div>Clinic ID</div>
+    <div>Patient</div>
+    <div>Reason</div>
+</div>
 
-    <!-- Rows -->
-    @for (appt of appointmentList(); track appt.id) {
-    <div class="row">
+<!-- Virtual Scroll -->
+<cdk-virtual-scroll-viewport itemSize="50" class="viewport" >
+    <div *cdkVirtualFor="let appt of appointmentList(); trackBy: trackById" class="row">
         <div>{{ appt.id }}</div>
         <div>{{ appt.clinicId }}</div>
         <div>{{ appt.patientName }}</div>
         <div>{{ appt.reason }}</div>
     </div>
-    }
-</div>
+</cdk-virtual-scroll-viewport>
 } @else if (!appointmentStore.loading()) {
-
 <div class="info no-data">No data found</div>
-
 }
