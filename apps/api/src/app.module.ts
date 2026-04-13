@@ -4,6 +4,7 @@ import { ConfigModule }  from '@nestjs/config';
 import { PrismaModule }  from '../prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AppointmentsModule } from '../modules/appointments/appointments.module';
+import { AiModule } from '../modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { AppointmentsModule } from '../modules/appointments/appointments.module'
     }),
     PrismaModule,           // global — available everywhere
     AppointmentsModule,
+    AiModule,
   ],
   controllers: [AppController],
 })
