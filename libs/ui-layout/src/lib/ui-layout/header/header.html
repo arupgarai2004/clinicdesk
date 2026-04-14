@@ -1,8 +1,12 @@
-<header class="header">
-  <div class="logo">Clinic Dashboard</div>
+<header class="navbar navbar-expand-md navbar-dark bg-primary shadow-sm px-3 px-md-4 py-3">
+  <div class="container-fluid p-0">
+    <a routerLink="/" class="navbar-brand fw-semibold mb-0">Clinic Dashboard</a>
 
-  <nav class="nav">
-    <a routerLink="/">Home</a>
-    <a routerLink="/appointments">Appointments</a>
-  </nav>
+    <nav class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2 gap-md-3">
+      <a routerLink="/" class="text-white small fw-medium">Home</a>
+      <a routerLink="/appointment-list" class="text-white small fw-medium">Appointments</a>
+      <a routerLink="/weekly-calendar" class="text-white small fw-medium">Calendar</a>
+      <a routerLink="/settings" class="text-white small fw-medium">Settings</a>
+    </nav>
+  </div>
 </header>
