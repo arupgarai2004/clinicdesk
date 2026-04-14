@@ -1,5 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { AppointmentStore } from '@org/data-access';
+import { Appointment } from '@org/models';
 import { computed } from '@angular/core';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 
@@ -15,7 +16,7 @@ export class AppointmentList implements OnInit {
   appointmentStore = inject(AppointmentStore);
 
   appointmentList = computed(() => this.appointmentStore.appointments());
-  trackById = (_: number, item: any) => item.id;
+  trackById = (_: number, item: Appointment) => item.id;
   ngOnInit() {
     this.appointmentStore.loadAppointments();
   }

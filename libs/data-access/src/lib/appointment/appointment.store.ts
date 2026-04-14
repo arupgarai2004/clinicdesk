@@ -2,8 +2,8 @@ import {signalStore, withState, withMethods, patchState} from '@ngrx/signals'
 import { computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import {AppointmentsService} from '../../../../api/src/lib/appointments.service';
-import {AppointmentState} from '../../../../shared/models/src/lib/appointment.model';
+import { AppointmentsService } from '@org/api';
+import { AppointmentState } from '@org/models';
 
 
 
@@ -46,6 +46,5 @@ export const AppointmentStore = signalStore(
     };
   })
 );
-
 
 

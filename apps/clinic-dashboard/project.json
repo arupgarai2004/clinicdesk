@@ -4,7 +4,7 @@
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "apps/clinic-dashboard/src",
-  "tags": [],
+  "tags": ["scope:shared"],
   "targets": {
     "build": {
       "executor": "@angular-devkit/build-angular:browser",
