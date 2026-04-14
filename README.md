@@ -1,282 +1,321 @@
-# Nx Angular Repository
+# ClinicDesk
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+ClinicDesk is an Nx monorepo for a clinic appointment workflow. The repository currently contains a NestJS API, an Angular clinic dashboard, a Next.js patient-facing app, and shared libraries for models, API access, state, and layout components.
 
-✨ A repository showcasing key [Nx](https://nx.dev) features for Angular monorepos ✨
-🚀 If you haven't connected to Nx Cloud yet, [complete your setup here](https://cloud.nx.app/setup/connect-workspace/guide). Get faster builds with remote caching, distributed task execution, and self-healing CI. [See how your workspace can benefit](#nx-cloud).
-## 📦 Project Overview
+## What is in the repo
 
-This repository demonstrates a production-ready Angular monorepo with:
+- `apps/api`
+  NestJS backend with Prisma and PostgreSQL. Exposes appointment endpoints and an AI suggestion endpoint.
+- `apps/clinic-dashboard`
+  Angular dashboard for clinic staff. It loads appointment data from the API and renders the main admin experience.
+- `apps/patient-web`
+  Next.js patient-facing app. This app is present in the workspace, but its main page is still scaffolded starter content rather than a full booking flow.
+- `libs/shared/models`
+  Shared TypeScript models for appointments and AI request/response shapes.
+- `libs/api`
+  Angular HTTP client service used by the dashboard.
+- `libs/data-access`
+  NGRX Signals store that coordinates appointment loading for the dashboard.
+- `libs/ui-layout`
+  Shared Angular layout components such as header and footer.
 
-- **2 Applications**
+## Architecture
 
-  - `shop` - Angular e-commerce application with product listings and detail views
-  - `api` - Backend API with Docker support serving product data
+The implemented request flow today is:
 
-- **6 Libraries**
+```text
+Angular clinic dashboard
+  -> libs/data-access AppointmentStore
+  -> libs/api AppointmentsService
+  -> /api/appointments
+  -> NestJS appointments module
+  -> Prisma service
+  -> PostgreSQL
+```
 
-  - `@org/feature-products` - Product listing feature (Angular)
-  - `@org/feature-product-detail` - Product detail feature (Angular)
-  - `@org/data` - Data access layer for shop features
-  - `@org/shared-ui` - Shared UI components
-  - `@org/models` - Shared data models
-  - `@org/products` - API product service library
+AI-assisted appointment suggestions follow a similar path:
 
-- **E2E Testing**
-  - `shop-e2e` - Playwright tests for the shop application
+```text
+Client
+  -> /ai/suggestAppointmentDetails
+  -> NestJS AI module
+  -> Google Gemini
+  -> JSON suggestion response
+```
 
-## 🚀 Quick Start
+### App responsibilities
+
+#### API
+
+The API is a NestJS application bootstrapped from `apps/api/src/main.ts` and listens on port `3333`. CORS is enabled, environment variables are loaded from `apps/api/.env`, and Prisma is registered through a dedicated `PrismaModule`.
+
+Main modules:
+
+- `AppointmentsModule`
+  Handles appointment listing, creation, and status updates.
+- `AiModule`
+  Generates scheduling suggestions such as recommended duration and preparation notes.
+
+Implemented endpoints:
+
+- `GET /appointments`
+  Returns appointments with optional `clinicId`, `date`, `status`, and `search` filters.
+- `POST /appointments`
+  Creates an appointment.
+- `PUT /appointments/:id/status`
+  Updates an appointment status.
+- `POST /ai/suggestAppointmentDetails`
+  Returns AI-generated duration and prep guidance.
+
+#### Clinic dashboard
+
+The clinic dashboard is an Angular application in `apps/clinic-dashboard`. It uses standalone components, Angular routing, hydration support, and an `/api` proxy to the backend running on `http://localhost:3333`.
+
+Current routes:
+
+- `/appointment-list`
+- `/appointment-details/:id`
+- `/weekly-calendar`
+- `/settings`
+
+Current implementation status:
+
+- `appointment-list` is the most complete screen. It loads appointments through a signal store and renders them with Angular CDK virtual scrolling for large result sets.
+- `appointment-details`, `weekly-calendar`, and `settings` routes exist, but their components are currently placeholders.
+
+#### Patient web
+
+The patient app is a Next.js application in `apps/patient-web`. The project is wired into Nx and has build, dev, start, lint, and test targets. At the moment, the main page still contains default starter content, so the patient booking experience is not yet implemented in the UI.
+
+## Frontend design and UI structure
+
+The current UI design is functional and scaffold-first:
+
+- The Angular dashboard is the main working frontend.
+- Shared Angular layout pieces live in `libs/ui-layout`.
+- Dashboard state is managed with `@ngrx/signals` in `libs/data-access`.
+- The appointments list focuses on performance with CDK virtual scrolling.
+- The Next.js patient app is still in starter state and should be treated as a foundation for future patient-facing design work.
+
+If you are onboarding to the project, it is best to think of ClinicDesk today as an API-first admin dashboard with an early-stage patient portal.
+
+## Database design
+
+Prisma schema lives at `apps/api/prisma/schema.prisma`, and Prisma config lives at `apps/api/prisma.config.ts`.
+
+### Database
+
+- Provider: PostgreSQL
+- Runtime adapter: `@prisma/adapter-pg`
+- Current environment points to Neon PostgreSQL
+
+### Data model
+
+#### `Clinic`
+
+Stores clinic metadata and schedule defaults.
+
+- `id`
+- `name`
+- `email` (unique)
+- `timezone`
+- `workingHours` as JSON
+- timestamps
+
+Relations:
+
+- one-to-many with `Appointment`
+- one-to-many with `Availability`
+
+#### `Appointment`
+
+Core booking entity.
+
+- `id`
+- `clinicId`
+- `patientName`
+- `patientEmail`
+- `reason`
+- `startTime`
+- `endTime`
+- `status`
+- `cancelToken` (unique, optional)
+- `aiSuggestion` as JSON
+- timestamps
+
+Indexes:
+
+- `(clinicId, startTime)` for calendar queries
+- `(clinicId, status)` for status filtering
+
+#### `Availability`
+
+Weekly operating hours per clinic and weekday.
+
+- `id`
+- `clinicId`
+- `dayOfWeek`
+- `startTime`
+- `endTime`
+- `isOpen`
+
+Constraint:
+
+- unique per `(clinicId, dayOfWeek)`
+
+#### `AppStatus`
+
+Appointment status enum values:
+
+- `PENDING`
+- `CONFIRMED`
+- `CANCELLED`
+- `COMPLETED`
+
+### Seed data
+
+`apps/api/prisma/seed.ts` creates:
+
+- a demo clinic in Amsterdam
+- weekday availability
+- 100 sample appointments with mixed statuses
+
+## Shared libraries
+
+### `libs/shared/models`
+
+Defines shared interfaces used across the stack, including:
+
+- `Appointment`
+- `AppointmentFilters`
+- `AppointmentQuery`
+- `AppointmentState`
+- `AiAppointmentSuggestRequest`
+- `AiAppointmentSuggestResponse`
+
+### `libs/api`
+
+Contains the Angular service that calls the appointment API using `HttpClient`.
+
+### `libs/data-access`
+
+Contains `AppointmentStore`, implemented with `signalStore`, which:
+
+- manages loading state
+- fetches appointment data
+- stores the appointment list for dashboard screens
+
+## Local development
+
+### Prerequisites
+
+- Node.js
+- npm
+- PostgreSQL connection string
+- Gemini API key for AI suggestions
+
+### Environment
+
+The API reads environment variables from `apps/api/.env`.
+
+Required values:
+
+```env
+DATABASE_URL=postgresql://...
+DIRECT_URL=postgresql://... # optional
+GEMINI_API_KEY=your-key
+```
+
+### Install dependencies
 
 ```bash
-# Clone the repository
-git clone <your-fork-url>
-cd <your-repository-name>
-
-# Install dependencies
-# (Note: You may need --legacy-peer-deps)
 npm install
-
-# Serve the Angular shop application (this will simultaneously serve the API backend)
-npx nx serve shop
-
-# ...or you can serve the API separately
-npx nx serve api
-
-# Build all projects
-npx nx run-many -t build
-
-# Run tests
-npx nx run-many -t test
-
-# Lint all projects
-npx nx run-many -t lint
-
-# Run e2e tests
-npx nx e2e shop-e2e
-
-# Run tasks in parallel
-
-npx nx run-many -t lint test build e2e --parallel=3
-
-# Visualize the project graph
-npx nx graph
 ```
 
-## ⭐ Featured Nx Capabilities
-
-This repository showcases several powerful Nx features:
-
-### 1. 🔒 Module Boundaries
-
-Enforces architectural constraints using tags. Each project has specific dependencies it can use:
-
-- `scope:shared` - Can be used by all projects
-- `scope:shop` - Shop-specific libraries
-- `scope:api` - API-specific libraries
-- `type:feature` - Feature libraries
-- `type:data` - Data access libraries
-- `type:ui` - UI component libraries
-
-**Try it out:**
+### Start the backend
 
 ```bash
-# See the current project graph and boundaries
-npx nx graph
-
-# View a specific project's details
-npx nx show project shop --web
+npm exec nx serve api
 ```
 
-[Learn more about module boundaries →](https://nx.dev/features/enforce-module-boundaries)
+The API runs on `http://localhost:3333`.
 
-### 2. 🐳 Docker Integration
-
-The API project includes Docker support with automated targets and release management:
+### Start the clinic dashboard
 
 ```bash
-# Build Docker image
-npx nx docker:build api
-
-# Run Docker container
-npx nx docker:run api
-
-# Release with automatic Docker image versioning
-npx nx release
+npm exec nx serve clinic-dashboard
 ```
 
-**Nx Release for Docker:** The repository is configured to use Nx Release for managing Docker image versioning and publishing. When running `nx release`, Docker images for the API project are automatically versioned and published based on the release configuration in `nx.json`. This integrates seamlessly with semantic versioning and changelog generation.
+The dashboard runs on `http://localhost:4200` and proxies `/api` requests to the backend.
 
-[Learn more about Docker integration →](https://nx.dev/recipes/nx-release/release-docker-images)
-
-### 3. 🎭 Playwright E2E Testing
-
-End-to-end testing with Playwright is pre-configured:
+### Start the patient app
 
 ```bash
-# Run e2e tests
-npx nx e2e shop-e2e
-
-# Run e2e tests in CI mode
-npx nx e2e-ci shop-e2e
+npm exec nx dev patient-web
 ```
 
-[Learn more about E2E testing →](https://nx.dev/technologies/test-tools/playwright/introduction#e2e-testing)
+The patient app runs on the Next.js dev server, typically `http://localhost:3000`.
 
-### 4. ⚡ Vitest for Unit Testing
-
-Fast unit testing with Vite for Angular libraries:
+## Useful Nx commands
 
 ```bash
-# Test a specific library
-npx nx test data
-
-# Test all projects
-npx nx run-many -t test
+npm exec nx show projects
+npm exec nx graph
+npm exec nx build api
+npm exec nx build clinic-dashboard
+npm exec nx build patient-web
+npm exec nx test patient-web
+npm exec nx test clinic-dashboard
+npm exec nx run-many -t build
 ```
 
-[Learn more about Vite testing →](https://nx.dev/recipes/vite)
+## Testing
 
-### 5. 🔧 Self-Healing CI
+The workspace includes:
 
-The CI pipeline includes `nx fix-ci` which automatically identifies and suggests fixes for common issues:
+- unit and integration-style tests for apps and libraries
+- Playwright e2e projects for `clinic-dashboard` and `patient-web`
+
+Examples:
 
 ```bash
-# In CI, this command provides automated fixes
-npx nx fix-ci
+npm exec nx test clinic-dashboard
+npm exec nx test patient-web
+npm exec nx e2e clinic-dashboard-e2e
+npm exec nx e2e patient-web-e2e
 ```
 
-This feature helps maintain a healthy CI pipeline by automatically detecting and suggesting solutions for:
+## Current state summary
 
-- Missing dependencies
-- Incorrect task configurations
-- Cache invalidation issues
-- Common build failures
+Implemented well today:
 
-[Learn more about self-healing CI →](https://nx.dev/ci/features/self-healing-ci)
+- NestJS API with Prisma/Postgres integration
+- clinic-facing Angular dashboard shell
+- appointment list retrieval and rendering
+- shared type models
+- AI suggestion endpoint
 
-## 📁 Project Structure
+Partially implemented or placeholder:
 
+- patient-facing Next.js booking experience
+- appointment details screen
+- weekly calendar screen
+- settings screen
+
+## Monorepo structure
+
+```text
+apps/
+  api/
+  clinic-dashboard/
+  clinic-dashboard-e2e/
+  patient-web/
+  patient-web-e2e/
+libs/
+  api/
+  data-access/
+  shared/
+    constants/
+    models/
+  ui-layout/
 ```
-├── apps/
-│   ├── shop/           [scope:shop]    - Angular e-commerce app
-│   ├── shop-e2e/                       - E2E tests for shop
-│   └── api/            [scope:api]     - Backend API with Docker
-├── libs/
-│   ├── shop/
-│   │   ├── feature-products/        [scope:shop,type:feature] - Product listing
-│   │   ├── feature-product-detail/  [scope:shop,type:feature] - Product details
-│   │   ├── data/                    [scope:shop,type:data]    - Data access
-│   │   └── shared-ui/               [scope:shop,type:ui]      - UI components
-│   ├── api/
-│   │   └── products/    [scope:api]    - Product service
-│   └── shared/
-│       └── models/      [scope:shared,type:data] - Shared models
-├── nx.json             - Nx configuration
-├── tsconfig.json       - TypeScript configuration
-└── eslint.config.mjs   - ESLint with module boundary rules
-```
-
-## 🏷️ Understanding Tags
-
-This repository uses tags to enforce module boundaries:
-
-| Project            | Tags                         | Can Import From              |
-| ------------------ | ---------------------------- | ---------------------------- |
-| `shop`             | `scope:shop`                 | `scope:shop`, `scope:shared` |
-| `api`              | `scope:api`                  | `scope:api`, `scope:shared`  |
-| `feature-products` | `scope:shop`, `type:feature` | `scope:shop`, `scope:shared` |
-| `data`             | `scope:shop`, `type:data`    | `scope:shared`               |
-| `models`           | `scope:shared`, `type:data`  | Nothing (base library)       |
-
-## 📚 Useful Commands
-
-```bash
-# Project exploration
-npx nx graph                                    # Interactive dependency graph
-npx nx list                                     # List installed plugins
-npx nx show project shop --web                 # View project details
-
-# Development
-npx nx serve shop                              # Serve Angular app
-npx nx serve api                               # Serve backend API
-npx nx build shop                              # Build Angular app
-npx nx test data                               # Test a specific library
-npx nx lint feature-products                   # Lint a specific library
-
-# Running multiple tasks
-npx nx run-many -t build                       # Build all projects
-npx nx run-many -t test --parallel=3          # Test in parallel
-npx nx run-many -t lint test build            # Run multiple targets
-
-# Affected commands (great for CI)
-npx nx affected -t build                       # Build only affected projects
-npx nx affected -t test                        # Test only affected projects
-
-# Docker operations
-npx nx docker:build api                        # Build Docker image
-npx nx docker:run api                          # Run Docker container
-```
-
-## 🎯 Adding New Features
-
-### Generate a new Angular application:
-
-```bash
-npx nx g @nx/angular:app my-app
-```
-
-### Generate a new Angular library:
-
-```bash
-npx nx g @nx/angular:lib my-lib
-```
-
-### Generate a new Angular component:
-
-```bash
-npx nx g @nx/angular:component my-component --project=my-lib
-```
-
-### Generate a new API library:
-
-```bash
-npx nx g @nx/node:lib my-api-lib
-```
-
-You can use `npx nx list` to see all available plugins and `npx nx list <plugin-name>` to see all generators for a specific plugin.
-
-## Nx Cloud
-
-Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## 🔗 Learn More
-
-- [Nx Documentation](https://nx.dev)
-- [Angular Monorepo Tutorial](https://nx.dev/getting-started/tutorials/angular-monorepo-tutorial)
-- [Module Boundaries](https://nx.dev/features/enforce-module-boundaries)
-- [Docker Integration](https://nx.dev/recipes/nx-release/release-docker-images)
-- [Playwright Testing](https://nx.dev/technologies/test-tools/playwright/introduction#e2e-testing)
-- [Vite with Angular](https://nx.dev/recipes/vite)
-- [Nx Cloud](https://nx.dev/ci/intro/why-nx-cloud)
-- [Releasing Packages](https://nx.dev/features/manage-releases)
-
-## 💬 Community
-
-Join the Nx community:
-
-- [Discord](https://go.nx.dev/community)
-- [X (Twitter)](https://twitter.com/nxdevtools)
-- [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [YouTube](https://www.youtube.com/@nxdevtools)
-- [Blog](https://nx.dev/blog)

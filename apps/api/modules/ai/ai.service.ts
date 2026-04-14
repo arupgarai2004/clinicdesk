@@ -1,8 +1,7 @@
 import { Injectable, InternalServerErrorException, Logger, Inject } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { AiAppointmentSuggestRequest, AiAppointmentSuggestResponse, } from "@org/models";
-import { config } from "rxjs/internal/config";
+import { AiAppointmentSuggestRequest, AiAppointmentSuggestResponse } from "@org/models";
 
 @Injectable()
 export class AiService {
@@ -10,52 +9,48 @@ export class AiService {
     private readonly genAI: GoogleGenerativeAI;
 
     constructor(@Inject(ConfigService) private readonly config: ConfigService) {
-        this.logger.log('Initializing AiService');
-        if (!this.config) {
-            throw new Error('ConfigService was not injected into AiService');
-        }
-
         const apiKey = this.config.getOrThrow<string>('GEMINI_API_KEY');
         this.genAI = new GoogleGenerativeAI(apiKey);
-
-        this.logger.log(`Initializing GoogleGenerativeAI with API key: ***` + apiKey.slice(-4));
-
-        this.genAI = new GoogleGenerativeAI(apiKey);
-
     }
 
     async suggestAppointmentDetails(dto: AiAppointmentSuggestRequest): Promise<AiAppointmentSuggestResponse> {
-        const model = this.genAI.getGenerativeModel(
-            { model: 'gemini-1.5-flash' },
-            { apiVersion: "v1" }
-        );
+        // 1. Use Gemini 1.5 pro (most up-to-date and cost-effective)
+        const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
         const prompt = `
-        You are a medical appointment assistant.
-        Patient name: ${dto.patientName}
-        Reason: "${dto.reason}"
-        Respond with ONLY this JSON:
-        {
-            "suggestedDuration": <15 | 30 | 45 | 60>,
-                "prepNotes": "<one or two practical sentences for clinic staff>",
-                    "confidence": "<low | medium | high>"
-        } `.trim();
+            You are a medical administrative assistant helping to schedule appointments.
+            Patient Name: ${dto.patientName}
+            Reason for Visit: "${dto.reason}"
+
+            Please respond ONLY with a JSON object in this EXACT format:
+            {
+                "suggestedDuration": 30, 
+                "prepNotes": "string describing what clinic staff should do before the visit",
+                "confidence": "low" | "medium" | "high"
+            }
+            
+            Important:
+            * "suggestedDuration" MUST be one of these values: 15, 30, 45, or 60.
+            * Do NOT add any extra text outside of the JSON.
+        `;
 
         try {
             const result = await model.generateContent(prompt);
-            const parsed = JSON.parse(result.response.text()) as AiAppointmentSuggestResponse;
-            if (!parsed.suggestedDuration || !parsed.prepNotes) {
-                throw new Error('Invalid response shape');
-            }
+            const text = result.response.text();
+
+            // Clean the string in case AI adds markdown formatting
+            const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            const parsed = JSON.parse(cleanedText) as AiAppointmentSuggestResponse;
             return parsed;
         } catch (err) {
-            this.logger.error('Gemini suggest failed', err);
-            throw new InternalServerErrorException('AI suggestion failed. Please try again.');
+            this.logger.error('Gemini Suggestion Failed', err);
+            // Provide a fallback value that matches the schema
+            return {
+                suggestedDuration: 30,
+                prepNotes: 'Please check the patient history before the appointment.',
+                confidence: 'low'
+            };
         }
     }
-
-
 }
-
-
-
