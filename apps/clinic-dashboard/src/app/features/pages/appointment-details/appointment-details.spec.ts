@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { AppointmentDetails } from './appointment-details';
 
 describe('AppointmentDetails', () => {
@@ -8,6 +9,16 @@ describe('AppointmentDetails', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppointmentDetails],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              paramMap: convertToParamMap({ id: 'appt-123' }),
+            },
+          },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AppointmentDetails);

@@ -67,4 +67,12 @@ export class AppointmentsService {
       data:  { status: 'CANCELLED' },
     });
   }
+
+  // ── Delete appointment ─────────────────────────────────────────────────
+  async deleteAppointment(id: string) { 
+    const appt = await this.prisma.appointment.findUnique({ where: { id } });
+    if (!appt) throw new NotFoundException(`Appointment ${id} not found`);
+    return this.prisma.appointment.delete({ where: { id } });
+  }
+
 }

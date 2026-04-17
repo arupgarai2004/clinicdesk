@@ -4,8 +4,26 @@
   display: block;
 }
 
-.appointment-grid {
-  display: grid;
-  grid-template-columns: minmax(10rem, 1.4fr) minmax(10rem, 1.4fr) minmax(10rem, 1fr) minmax(12rem, 1.2fr);
-  gap: 1rem;
+.appointment-grid-row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.appointment-grid-row > [class*='col-'] {
+  padding-left: 0;
+  padding-right: 0;
+  min-width: 0;
+}
+
+.row-link {
+  cursor: pointer;
+}
+
+.row-link:hover {
+  background-color: rgba(13, 110, 253, 0.04);
+}
+
+.row-link:focus-visible {
+  outline: 2px solid #0d6efd;
+  outline-offset: -2px;
 }

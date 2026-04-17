@@ -1,5 +1,5 @@
 import {signalStore, withState, withMethods, patchState} from '@ngrx/signals'
-import { computed, inject, signal } from '@angular/core';
+import { inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { AppointmentsService } from '@org/api';

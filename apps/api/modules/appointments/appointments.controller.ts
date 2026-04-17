@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Inject, Put, Post } from '@nestjs/common';
+import { Controller, Get, Query, Inject, Put, Post, Param, Delete, NotFoundException } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { AppStatus, Prisma } from '@prisma/client';
 import { AppointmentFilters, AppointmentQuery } from '@org/models';
@@ -8,11 +8,10 @@ export class AppointmentsController {
   constructor(
     @Inject(AppointmentsService)
     private readonly appointmentsService: AppointmentsService,
-  ) {}
+  ) { }
 
   @Get()
   async findAll(@Query() query: AppointmentQuery) {
-    console.log('AppointmentsController this.appointmentsService:', this.appointmentsService);
     const filters: AppointmentFilters = {
       date: query.date,
       status: query.status,
@@ -21,14 +20,37 @@ export class AppointmentsController {
     return this.appointmentsService.findAll(query.clinicId, filters);
   }
 
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    try {
+      return await this.appointmentsService.findOne(id);
+    } catch (err) {
+      throw new NotFoundException(`Appointment ${id} not found`);
+    }
+  }
+
+
   @Put(':id/status')
-  async updateStatus(@Query('id') id: string, @Query('status') status: AppStatus) {
-    return this.appointmentsService.updateStatus(id, status as AppStatus);
+  async updateStatus(@Param('id') id: string, @Query('status') status: AppStatus) {
+    try {
+      return await this.appointmentsService.updateStatus(id, status as AppStatus);
+    } catch (err) {
+      throw new NotFoundException(`Appointment ${id} not found`);
+    }
   }
 
   @Post()
   async create(@Query() query: Prisma.AppointmentCreateInput) {
     return this.appointmentsService.create(query);
+  }
+
+  @Delete(':id')
+  async deleteAppointment(@Param('id') id: string) {
+    try {
+      return await this.appointmentsService.deleteAppointment(id);
+    } catch (err) {
+      throw new NotFoundException(`Appointment ${id} not found`);
+    }
   }
 
 }

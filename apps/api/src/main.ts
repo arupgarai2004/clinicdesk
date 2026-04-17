@@ -10,7 +10,6 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
   app.enableCors();
-  console.log('DATABASE_URL:', process.env.DATABASE_URL);
   await app.listen(3333);
   console.log('API running on http://localhost:3333');
 }
