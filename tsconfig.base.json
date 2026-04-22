@@ -18,7 +18,8 @@
       "@org/api": ["libs/api/src/index.ts"],
       "@org/models": ["libs/shared/models/src/index.ts"],
       "@org/data-access": ["libs/data-access/src/index.ts"],
-      "@org/ui-layout": ["libs/ui-layout/src/index.ts"]
+      "@org/ui-layout": ["libs/ui-layout/src/index.ts"],
+      "@org/constants": ["libs/shared/constants/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

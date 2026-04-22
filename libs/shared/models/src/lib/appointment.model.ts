@@ -28,6 +28,17 @@ export interface Appointment {
 
 export interface AppointmentState {
   appointments: Appointment[];
+  selectedAppointment: Appointment | null;
   loading: boolean;
   error: string | null;
+}
+
+export interface CreateAppointmentDto {
+  clinicId: string;
+  patientName: string;
+  patientEmail: string;
+  reason: string;
+  startTime: string;
+  endTime: string;
+  status?: AppStatus;
 }

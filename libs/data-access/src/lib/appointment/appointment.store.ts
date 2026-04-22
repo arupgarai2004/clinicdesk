@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { AppointmentsService } from '@org/api';
-import { AppointmentState } from '@org/models';
+import { AppointmentState, Appointment } from '@org/models';
 
 
 
@@ -13,20 +13,21 @@ export const AppointmentStore = signalStore(
   // ✅ State
   withState<AppointmentState>({
     appointments: [],
+    selectedAppointment: null,
     loading: false,
     error: null
   }),
 
   // ✅ Methods
   withMethods((store) => {
-    const service = inject(AppointmentsService);
+    const appionmentService = inject(AppointmentsService);
 
     const loadAppointments = async (clinicId?: string) => {
       patchState(store, { loading: true, error: null });
 
       try {
         const data = await firstValueFrom(
-          service.getAppointments(clinicId)
+          appionmentService.getAppointments(clinicId)
         );
 
         patchState(store, {
@@ -40,11 +41,34 @@ export const AppointmentStore = signalStore(
         });
       }
     };
+    const appointmentDetails= async (id?: string) => {
+      if (!id) {
+        patchState(store, { error: 'Appointment ID is required', loading: false });
+        return;
+      }
+      patchState(store, { loading: true, error: null });
+      try{
+        const data = await firstValueFrom(
+          appionmentService.getAppointment(id)
+        );
+
+        patchState(store, {
+          selectedAppointment: data,
+          loading: false
+        });
+      }catch (err: any) {
+        patchState(store, {
+          error: err.message || 'Failed to load appointments',
+          loading: false
+        });
+      }
+
+    };
 
     return {
-      loadAppointments
+      loadAppointments,
+      appointmentDetails
     };
   })
 );
-
 
