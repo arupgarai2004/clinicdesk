@@ -14,7 +14,6 @@ export class AppointmentDetails {
   private readonly route = inject(ActivatedRoute);
   readonly appointmentStore = inject(AppointmentStore);
   readonly aiStore = inject(AiStore);
-  private lastSuggestedAppointmentId: string | null = null;
 
   readonly appointmentId = this.route.snapshot.paramMap.get('id');
 
@@ -28,22 +27,16 @@ export class AppointmentDetails {
         this.appointmentStore.appointmentDetails(this.appointmentId);
       }
     });
-
-    effect(() => {
-      const appointment = this.appointment();
-
-      if (!appointment || this.lastSuggestedAppointmentId === appointment.id) {
-        return;
-      }
-
-      this.lastSuggestedAppointmentId = appointment.id;
-      this.aiStore.loadSuggestion({
-        appointmentId: appointment.id,
-        patientName: appointment.patientName,
-        reason: appointment.reason,
-      });
-    });
   }
+
+  readonly aiSuggestion = computed(() => {
+    const appointmentId = this.appointmentId;
+    if (!appointmentId) {
+      return null;
+    }
+
+    return this.aiStore.suggestions()[appointmentId] ?? null;
+  });
 
   readonly durationMinutes = computed(() => {
   const appt = this.appointment();
@@ -55,5 +48,19 @@ export class AppointmentDetails {
       (new Date(appt.endTime).getTime() - new Date(appt.startTime).getTime()) / 60000
     )
   );
-});
+  });
+
+  loadAiSuggestion() {
+    const appointment = this.appointment();
+
+    if (!appointment || this.aiStore.loading()) {
+      return;
+    }
+
+    this.aiStore.loadSuggestion({
+      appointmentId: appointment.id,
+      patientName: appointment.patientName,
+      reason: appointment.reason,
+    });
+  }
 }

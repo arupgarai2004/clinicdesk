@@ -11,7 +11,8 @@ export interface AiAppointmentSuggestResponse {
 }
 
 export interface AiState {  
-  suggestion: AiAppointmentSuggestResponse | null;
+  suggestions: Record<string, AiAppointmentSuggestResponse>;
+  activeAppointmentId: string | null;
   loading: boolean;
   error: string | null; 
 }

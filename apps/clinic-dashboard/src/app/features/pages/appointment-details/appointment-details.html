@@ -62,11 +62,20 @@
       <div class="col-12 col-md-6">
         <div class="border rounded-3 p-3 h-100">
           <div class="text-secondary text-uppercase small mb-2">AI suggestion</div>
+          <button
+            type="button"
+            class="btn btn-outline-primary btn-sm mb-3"
+            (click)="loadAiSuggestion()"
+            [disabled]="aiStore.loading()"
+          >
+            {{ aiSuggestion() ? 'Use saved AI suggestion' : 'Get AI suggestion' }}
+          </button>
+
           @if (aiStore.loading()) {
           <div class="text-primary fw-semibold">Generating AI suggestion...</div>
           } @else if (aiStore.error()) {
           <div class="text-danger fw-semibold">{{ aiStore.error() }}</div>
-          } @else if (aiStore.suggestion(); as suggestion) {
+          } @else if (aiSuggestion(); as suggestion) {
           <div class="d-flex flex-column gap-2">
             <div>
               <span class="text-secondary">Suggested duration:</span>

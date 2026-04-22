@@ -16,7 +16,7 @@ export class AiService {
     }
 
     async suggestAppointmentDetails(dto: AiAppointmentSuggestRequest): Promise<AiAppointmentSuggestResponse> {
-        const model = this.genAI.getGenerativeModel({ model: this.modelName });
+        const models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 
         const prompt = `
 You are a medical administrative assistant helping to schedule appointments.
@@ -34,29 +34,31 @@ Reason for Visit: "${dto.reason}"
             * "suggestedDuration" MUST be one of these values: 15, 30, 45, or 60.
             * Do NOT add any extra text outside of the JSON.
 `;
+        for (const modelName of models) {
+            try {
+                const model = this.genAI.getGenerativeModel({ model: modelName });
+                const result = await model.generateContent({
+                    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: 'application/json',
+                    },
+                });
+                const text = result.response.text();
 
-        try {
-            const result = await model.generateContent({
-                contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                generationConfig: {
-                    responseMimeType: 'application/json',
-                },
-            });
-            const text = result.response.text();
+                // Clean the string in case AI adds markdown formatting
+                const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-            // Clean the string in case AI adds markdown formatting
-            const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-
-            const parsed = JSON.parse(cleanedText) as AiAppointmentSuggestResponse;
-            return parsed;
-        } catch (err) {
-            this.logger.error(`Gemini Suggestion Failed for model "${this.modelName}"`, err);
-            // Provide a fallback value that matches the schema
-            return {
-                suggestedDuration: 30,
-                prepNotes: 'Please check the patient history before the appointment.',
-                confidence: 'low'
-            };
+                const parsed = JSON.parse(cleanedText) as AiAppointmentSuggestResponse;
+                return parsed;
+            } catch (err) {
+                this.logger.error(`Gemini Suggestion Failed for model "${this.modelName}"`, err);
+                // Provide a fallback value that matches the schema
+                return {
+                    suggestedDuration: 30,
+                    prepNotes: 'Please check the patient history before the appointment.',
+                    confidence: 'low'
+                };
+            }
         }
     }
 }

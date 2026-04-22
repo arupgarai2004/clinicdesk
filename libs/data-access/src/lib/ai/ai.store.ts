@@ -9,7 +9,8 @@ export const AiStore = signalStore(
   { providedIn: 'root' },
 
   withState<AiState>({
-    suggestion: null,
+    suggestions: {},
+    activeAppointmentId: null,
     loading: false,
     error: null,
   }),
@@ -18,7 +19,21 @@ export const AiStore = signalStore(
     const aiService = inject(AiService);
 
     const loadSuggestion = async (request: AiAppointmentSuggestRequest) => {
-      patchState(store, { loading: true, error: null });
+      const cachedSuggestion = store.suggestions()[request.appointmentId];
+      if (cachedSuggestion) {
+        patchState(store, {
+          activeAppointmentId: request.appointmentId,
+          loading: false,
+          error: null,
+        });
+        return;
+      }
+
+      patchState(store, {
+        activeAppointmentId: request.appointmentId,
+        loading: true,
+        error: null,
+      });
 
       try {
         const response = await firstValueFrom(
@@ -26,12 +41,17 @@ export const AiStore = signalStore(
         );
 
         patchState(store, {
-          suggestion: response,
+          suggestions: {
+            ...store.suggestions(),
+            [request.appointmentId]: response,
+          },
+          activeAppointmentId: request.appointmentId,
           loading: false,
           error: null,
         });
       } catch (error) {
         patchState(store, {
+          activeAppointmentId: request.appointmentId,
           loading: false,
           error: error instanceof Error ? error.message : 'Failed to get suggestion',
         });
@@ -40,7 +60,7 @@ export const AiStore = signalStore(
 
     const clearSuggestion = () => {
       patchState(store, {
-        suggestion: null,
+        activeAppointmentId: null,
         error: null,
       });
     };
