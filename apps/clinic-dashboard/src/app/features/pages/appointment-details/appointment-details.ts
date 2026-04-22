@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
-import { AppointmentStore } from '@org/data-access';
+import { AppointmentStore, AiStore } from '@org/data-access';
 import { Appointment } from '@org/models';
 
 @Component({
@@ -13,6 +13,8 @@ import { Appointment } from '@org/models';
 export class AppointmentDetails {
   private readonly route = inject(ActivatedRoute);
   readonly appointmentStore = inject(AppointmentStore);
+  readonly aiStore = inject(AiStore);
+  private lastSuggestedAppointmentId: string | null = null;
 
   readonly appointmentId = this.route.snapshot.paramMap.get('id');
 
@@ -25,6 +27,21 @@ export class AppointmentDetails {
       if (this.appointmentId) {
         this.appointmentStore.appointmentDetails(this.appointmentId);
       }
+    });
+
+    effect(() => {
+      const appointment = this.appointment();
+
+      if (!appointment || this.lastSuggestedAppointmentId === appointment.id) {
+        return;
+      }
+
+      this.lastSuggestedAppointmentId = appointment.id;
+      this.aiStore.loadSuggestion({
+        appointmentId: appointment.id,
+        patientName: appointment.patientName,
+        reason: appointment.reason,
+      });
     });
   }
 

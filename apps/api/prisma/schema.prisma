@@ -14,9 +14,11 @@ datasource db {
 model Clinic {
   id           String         @id @default(cuid())
   name         String
+  address      String
   email        String         @unique
+  phoneNumber  String
   timezone     String         @default("Europe/Amsterdam")
-  workingHours Json           // { mon:{start:'09:00',end:'17:00'}, ... }
+  workingHours Json
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 

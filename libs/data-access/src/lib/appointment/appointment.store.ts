@@ -3,14 +3,14 @@ import { inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { AppointmentsService } from '@org/api';
-import { AppointmentState, Appointment } from '@org/models';
+import { AppointmentState } from '@org/models';
 
 
 
 export const AppointmentStore = signalStore(
   { providedIn: 'root' },
 
-  // ✅ State
+  
   withState<AppointmentState>({
     appointments: [],
     selectedAppointment: null,
@@ -18,7 +18,7 @@ export const AppointmentStore = signalStore(
     error: null
   }),
 
-  // ✅ Methods
+  
   withMethods((store) => {
     const appionmentService = inject(AppointmentsService);
 

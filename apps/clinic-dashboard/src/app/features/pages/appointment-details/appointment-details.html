@@ -58,10 +58,32 @@
           <div class="fw-semibold text-dark text-break">{{ appt.patientEmail }}</div>
         </div>
       </div>
-        <div class="col-12 col-md-6">
+
+      <div class="col-12 col-md-6">
         <div class="border rounded-3 p-3 h-100">
-          <div class="text-secondary text-uppercase small mb-2">Ai suggestion</div>
-          <div class="fw-semibold text-dark text-break">{{ appt.aiSuggestion }}</div>
+          <div class="text-secondary text-uppercase small mb-2">AI suggestion</div>
+          @if (aiStore.loading()) {
+          <div class="text-primary fw-semibold">Generating AI suggestion...</div>
+          } @else if (aiStore.error()) {
+          <div class="text-danger fw-semibold">{{ aiStore.error() }}</div>
+          } @else if (aiStore.suggestion(); as suggestion) {
+          <div class="d-flex flex-column gap-2">
+            <div>
+              <span class="text-secondary">Suggested duration:</span>
+              <span class="fw-semibold text-dark"> {{ suggestion.suggestedDuration }} mins</span>
+            </div>
+            <div>
+              <span class="text-secondary">Confidence:</span>
+              <span class="badge text-bg-light text-dark border text-uppercase ms-2">{{ suggestion.confidence }}</span>
+            </div>
+            <div>
+              <div class="text-secondary mb-1">Preparation notes:</div>
+              <div class="fw-semibold text-dark text-break">{{ suggestion.prepNotes }}</div>
+            </div>
+          </div>
+          } @else {
+          <div class="text-secondary">No suggestion available</div>
+          }
         </div>
       </div>
     </div>

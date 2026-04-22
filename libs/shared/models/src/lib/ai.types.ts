@@ -9,3 +9,9 @@ export interface AiAppointmentSuggestResponse {
   prepNotes:         string;
   confidence:        'low' | 'medium' | 'high';
 }
+
+export interface AiState {  
+  suggestion: AiAppointmentSuggestResponse | null;
+  loading: boolean;
+  error: string | null; 
+}
