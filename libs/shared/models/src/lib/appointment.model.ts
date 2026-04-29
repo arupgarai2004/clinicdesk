@@ -2,7 +2,7 @@
 export type AppStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 
 export interface AppointmentFilters {
-  date?:   string;   // 'YYYY-MM-DD'
+  date?: string;   // 'YYYY-MM-DD'
   status?: AppStatus;
   search?: string;
 }
@@ -24,6 +24,10 @@ export interface Appointment {
   aiSuggestion?: any;
   createdAt: Date;
   updatedAt: Date;
+  clinic?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface AppointmentState {

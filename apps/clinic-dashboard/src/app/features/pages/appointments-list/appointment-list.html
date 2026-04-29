@@ -6,8 +6,58 @@
 <div class="alert alert-danger mb-3" role="alert">{{ appointmentStore.error() }}</div>
 }
 
-@if (appointmentList().length > 0) {
+
 <section class="card border-0 shadow-sm">
+    @if (clinicOptions().length > 0 ) {
+    <div class="border-bottom px-3 px-md-5 py-3 bg-body-tertiary">
+        <div class="row g-3">
+            <div class="col-12 col-md-6 col-lg-2">
+                <label for="patientNameFilter" class="form-label small text-secondary mb-1">Patient name</label>
+                <input id="patientNameFilter" type="text" class="form-control" placeholder="Filter by patient name"
+                    [ngModel]="filters.patientName()" (ngModelChange)="filters.patientName.set($event)" />
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-2">
+                <label for="clinicFilter" class="form-label small text-secondary mb-1">Clinic</label>
+                <select id="clinicFilter" class="form-select" [ngModel]="filters.clinicId()"
+                    (ngModelChange)="filters.clinicId.set($event)">
+                    <option value="">All clinics</option>
+                    @for (clinic of clinicOptions(); track clinic.id) {
+                    <option [value]="clinic.id">{{ clinic.name }}</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-6 col-lg-2">
+                <label for="reasonFilter" class="form-label small text-secondary mb-1">Reason</label>
+                <input id="reasonFilter" type="text" class="form-control" placeholder="Filter by reason"
+                    [ngModel]="filters.reason()" (ngModelChange)="filters.reason.set($event)" />
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-2">
+                <label for="dateFilter" class="form-label small text-secondary mb-1">Date</label>
+                <input id="dateFilter" type="date" class="form-control" [ngModel]="filters.date()"
+                    (ngModelChange)="filters.date.set($event)" />
+            </div>
+            <div class="col-12 col-md-6 col-lg-2">
+                <label for="statusFilter" class="form-label small text-secondary mb-1">Status</label>
+                <select id="statusFilter" class="form-select" [ngModel]="filters.status()"
+                    (ngModelChange)="filters.status.set($event)">
+                    <option value="">All Status</option>
+                    @for (status of statusOption(); track status) {
+                    <option [value]="status">{{ status }}</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-6 col-lg-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-secondary w-100" (click)="resetFilters()">
+                    Reset filters
+                </button>
+            </div>
+        </div>
+    </div>
+    }
+
+    @if (appointmentList().length > 0) {
     <div class="card-body p-0">
         <div
             class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 px-3 px-md-5 py-3 border-bottom">
@@ -17,7 +67,10 @@
             <span class="badge text-bg-primary rounded-pill">{{ appointmentList().length }} records</span>
         </div>
 
-        <div class="d-none d-md-block bg-light text-uppercase small fw-semibold text-secondary border-bottom px-3 px-md-5 py-3">
+
+
+        <div
+            class="d-none d-md-block bg-light text-uppercase small fw-semibold text-secondary border-bottom px-3 px-md-5 py-3">
             <div class="row g-3 align-items-center appointment-grid-row">
                 <div class="col-1">ID</div>
                 <div class="col-2">Clinic ID</div>
@@ -42,13 +95,15 @@
                         <span class="badge text-bg-light text-dark border">#{{ appt.id }}</span>
                     </div>
                     <div class="small text-secondary">
-                        <div><span class="fw-semibold text-dark">Clinic:</span> {{ appt.clinicId }}</div>
+                        <div><span class="fw-semibold text-dark">Clinic:</span> {{ appt.clinic?.name }}</div>
                     </div>
                     <div class="small text-secondary">
-                        <div><span class="fw-semibold text-dark">Date & Time:</span> {{ appt.startTime | date:'dd MMM yyyy, HH:mm' }}</div>
+                        <div><span class="fw-semibold text-dark">Date & Time:</span> {{ appt.startTime | date:'dd MMM
+                            yyyy, HH:mm' }}</div>
                     </div>
                     <div class="small text-secondary">
-                        <div><span class="fw-semibold text-dark">Duration:</span> {{ getDurationMinutes(appt) }} mins</div>
+                        <div><span class="fw-semibold text-dark">Duration:</span> {{ getDurationMinutes(appt) }} mins
+                        </div>
                     </div>
                     <div class="small text-secondary">
                         <div><span class="fw-semibold text-dark">Status:</span> {{ appt.status }}</div>
@@ -58,7 +113,7 @@
                 <div class="d-none d-md-block">
                     <div class="row g-3 align-items-center appointment-grid-row">
                         <div class="col-1 small text-secondary text-truncate">{{ appt.id }}</div>
-                        <div class="col-2 text-truncate">{{ appt.clinicId }}</div>
+                        <div class="col-2 text-truncate">{{ appt.clinic?.name }}</div>
                         <div class="col-2 fw-medium text-dark text-truncate">{{ appt.patientName }}</div>
                         <div class="col-3 text-truncate">{{ appt.reason }}</div>
                         <div class="col-2 text-truncate">{{ appt.startTime | date:'dd MMM yyyy, HH:mm' }}</div>
@@ -71,7 +126,7 @@
             </a>
         </cdk-virtual-scroll-viewport>
     </div>
+    } @else if (!appointmentStore.loading()) {
+    <div class="alert alert-secondary mb-0" role="status">No appointments found</div>
+    }
 </section>
-} @else if (!appointmentStore.loading()) {
-<div class="alert alert-secondary mb-0" role="status">No data found</div>
-}

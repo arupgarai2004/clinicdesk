@@ -5,6 +5,7 @@ import { PrismaModule }  from '../prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AppointmentsModule } from '../modules/appointments/appointments.module';
 import { AiModule } from '../modules/ai/ai.module';
+import { ClinicsModule } from '../modules/clinics/clinics.module';
 
 @Module({
   imports: [
@@ -12,9 +13,10 @@ import { AiModule } from '../modules/ai/ai.module';
       isGlobal: true,
       envFilePath: path.resolve(process.cwd(), 'apps/api/.env'),
     }),
-    PrismaModule,           // global — available everywhere
+    PrismaModule,           
     AppointmentsModule,
     AiModule,
+    ClinicsModule,
   ],
   controllers: [AppController],
 })
