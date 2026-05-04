@@ -46,3 +46,13 @@ export interface CreateAppointmentDto {
   endTime: string;
   status?: AppStatus;
 }
+
+export interface UpdateAppointmentDto {
+  clinicId?: string;
+  patientName?: string;
+  patientEmail?: string;
+  reason?: string;
+  startTime?: string;
+  endTime?: string;
+  status?: AppStatus;
+}

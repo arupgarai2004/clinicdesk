@@ -56,3 +56,10 @@ export interface ClinicUpdateDto {
     timezone?: string;
     workingHours?: workingHours[];
 }
+
+export interface ClinicState {  
+    clinics: Clinic[];
+    selectedClinic: Clinic | null;
+    loading: boolean;
+    error: string | null;
+}

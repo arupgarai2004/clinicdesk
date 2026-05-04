@@ -1,7 +1,7 @@
-import { Controller, Get, Query, Inject, Put, Post, Param, Delete, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Get, Query, Inject, Put, Post, Param, Delete, NotFoundException } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
-import { AppStatus, Prisma } from '@prisma/client';
-import { AppointmentFilters, AppointmentQuery } from '@org/models';
+import { AppStatus } from '@prisma/client';
+import { AppointmentFilters, AppointmentQuery, CreateAppointmentDto, UpdateAppointmentDto } from '@org/models';
 
 @Controller('appointments')
 export class AppointmentsController {
@@ -39,9 +39,18 @@ export class AppointmentsController {
     }
   }
 
+  @Put(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateAppointmentDto) {
+    try {
+      return await this.appointmentsService.update(id, dto);
+    } catch (err) {
+      throw new NotFoundException(`Appointment ${id} not found`);
+    }
+  }
+
   @Post()
-  async create(@Query() query: Prisma.AppointmentCreateInput) {
-    return this.appointmentsService.create(query);
+  async create(@Body() dto: CreateAppointmentDto) {
+    return this.appointmentsService.create(dto);
   }
 
   @Delete(':id')

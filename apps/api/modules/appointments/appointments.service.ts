@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppStatus, Prisma } from '@prisma/client';
-import { AppointmentFilters } from '@org/models';
+import { AppointmentFilters, CreateAppointmentDto, UpdateAppointmentDto } from '@org/models';
 
 @Injectable()
 export class AppointmentsService {
@@ -64,8 +64,35 @@ export class AppointmentsService {
   }
 
   // ── Create ──────────────────────────────────────────────────────────────
-  async create(dto: Prisma.AppointmentCreateInput) {
-    return this.prisma.appointment.create({ data: dto });
+  async create(dto: CreateAppointmentDto) {
+    return this.prisma.appointment.create({
+      data: {
+        clinicId: dto.clinicId,
+        patientName: dto.patientName,
+        patientEmail: dto.patientEmail,
+        reason: dto.reason,
+        startTime: new Date(dto.startTime),
+        endTime: new Date(dto.endTime),
+        status: dto.status ?? 'PENDING',
+      },
+    });
+  }
+
+  async update(id: string, dto: UpdateAppointmentDto) {
+    const updatePayload: Prisma.AppointmentUpdateInput = {
+      patientName: dto.patientName,
+      patientEmail: dto.patientEmail,
+      reason: dto.reason,
+      status: dto.status,
+      startTime: dto.startTime ? new Date(dto.startTime) : undefined,
+      endTime: dto.endTime ? new Date(dto.endTime) : undefined,
+      clinic: dto.clinicId ? { connect: { id: dto.clinicId } } : undefined,
+    };
+
+    return this.prisma.appointment.update({
+      where: { id },
+      data: updatePayload,
+    });
   }
 
   // ── Update status ───────────────────────────────────────────────────────

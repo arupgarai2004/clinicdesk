@@ -1,6 +1,6 @@
 import { HttpClient } from "@angular/common/http";
 import { inject, Injectable } from "@angular/core";
-import { Appointment, CreateAppointmentDto } from "@org/models";
+import { Appointment, CreateAppointmentDto, UpdateAppointmentDto } from "@org/models";
 import { APP_CONSTANTS } from "@org/constants";
 
 @Injectable({
@@ -27,6 +27,10 @@ export class AppointmentsService {
 
   createAppointment(dto: CreateAppointmentDto) {
     return this.#httpClient.post<Appointment>(this.APPOINTMENT_BASE_API_URL, dto);
+  }
+
+  updateAppointment(id: string, dto: UpdateAppointmentDto) {
+    return this.#httpClient.put<Appointment>(`${this.APPOINTMENT_BASE_API_URL}/${id}`, dto);
   }
 
   deleteAppointment(id: string) {

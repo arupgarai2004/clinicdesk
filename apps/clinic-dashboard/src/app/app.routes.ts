@@ -29,5 +29,15 @@ export const appRoutes: Route[] = [
         path: 'settings',
         title: 'Settings',
         loadComponent: () => import('./features/pages/settings/settings').then(m => m.Settings)
+    },
+    {
+        path: 'manage-appointment',
+        title: 'Add New Appointment',
+        loadComponent: () => import('./features/pages/manageAppointment/manageAppointment').then(m => m.ManageAppointment)
+    },
+    {
+        path: 'manage-appointment/:id',
+        title: 'Update Appointment',
+        loadComponent: () => import('./features/pages/manageAppointment/manageAppointment').then(m => m.ManageAppointment)
     }
 ];

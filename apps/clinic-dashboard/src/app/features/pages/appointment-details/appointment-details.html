@@ -5,7 +5,12 @@
         <p class="text-secondary text-uppercase small mb-2">Appointment details</p>
         <h2 class="h4 mb-1">Appointment {{ appointmentId }}</h2>
       </div>
-      <a routerLink="/appointment-list" class="btn btn-outline-primary w-35 w-md-auto">Back to list</a>
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-primary" (click)="editAppointment()">Update</button>
+        <button type="button" class="btn btn-warning" (click)="updateStatus('CANCELLED')">Cancel</button>
+        <a routerLink="/appointment-list" class="btn btn-secondary">Back to list</a>
+        <button type="button" class="btn btn-danger" (click)="deleteAppointment()">Delete</button>
+      </div>
     </div>
 
     @if (appointment(); as appt) {
@@ -97,7 +102,7 @@
       </div>
     </div>
     } @else {
-    <div class="alert alert-secondary mb-0" role="status">Loading appointment details...</div>
+    <div class="alert alert-secondary mb-0" role="status">No appointment found.</div>
     }
   </div>
 </section>
