@@ -25,11 +25,11 @@ export class Settings implements OnInit {
   }
 
   addClinic = () => {
-    // Implementation for adding a new clinic
+     this.router.navigate(['/manage-clinic']);
   }
 
   manageClinic = () => {
-    // Implementation for managing clinics
+    this.router.navigate(['/clinic-list']);
   }
 
   manageAppointments = () => {

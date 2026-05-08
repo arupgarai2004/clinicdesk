@@ -39,5 +39,25 @@ export const appRoutes: Route[] = [
         path: 'manage-appointment/:id',
         title: 'Update Appointment',
         loadComponent: () => import('./features/pages/manageAppointment/manageAppointment').then(m => m.ManageAppointment)
+    },
+    {
+        path: 'clinic-list',
+        title: 'Clinic List',
+        loadComponent: () => import('./features/pages/clinic-list/clinic-list').then(m => m.ClinicList)
+    },
+    {
+        path: 'clinic-details/:id',
+        title: 'Clinic Details',
+        loadComponent: () => import('./features/pages/clinic-details/clinic-details').then(m => m.ClinicDetails)
+    },
+    {
+        path: 'manage-clinic/:id',
+        title: 'Manage Clinic',
+        loadComponent: () => import('./features/pages/manage-clinic/manage-clinic').then(m => m.ManageClinic)
+    },
+    {
+        path: 'manage-clinic',
+        title: 'Add Clinic',
+        loadComponent: () => import('./features/pages/manage-clinic/manage-clinic').then(m => m.ManageClinic)
     }
 ];

@@ -1,16 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { ActivatedRoute, provideRouter } from '@angular/router';
-import { AppointmentStore, ClinicStore } from '@org/data-access';
-import { ManageAppointment } from './manageAppointment';
+import { ClinicStore } from '@org/data-access';
+import { ManageClinic } from './manage-clinic';
 
-describe('ManageAppointment', () => {
-  let component: ManageAppointment;
-  let fixture: ComponentFixture<ManageAppointment>;
+describe('ManageClinic', () => {
+  let component: ManageClinic;
+  let fixture: ComponentFixture<ManageClinic>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ManageAppointment],
+      imports: [ManageClinic],
       providers: [
         provideRouter([]),
         {
@@ -26,23 +26,18 @@ describe('ManageAppointment', () => {
         {
           provide: ClinicStore,
           useValue: {
-            clinics: signal([]),
-            loadClinics: async () => undefined,
-          },
-        },
-        {
-          provide: AppointmentStore,
-          useValue: {
-            selectedAppointment: signal(null),
-            createAppointment: async () => undefined,
-            updateAppointment: async () => undefined,
-            appointmentDetails: async () => undefined,
+            selectedClinic: signal(null),
+            loading: signal(false),
+            error: signal(null),
+            loadClinicDetails: async () => undefined,
+            createClinic: async () => undefined,
+            updateClinic: async () => undefined,
           },
         },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(ManageAppointment);
+    fixture = TestBed.createComponent(ManageClinic);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

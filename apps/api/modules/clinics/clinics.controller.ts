@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Query, Inject } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Delete, Param, Query, Inject } from '@nestjs/common';
 import { ClinicsService } from './clinics.service';
 import { ClinicFilters, ClinicCreateDto, ClinicUpdateDto } from '@org/models';  
 
@@ -20,12 +20,12 @@ export class ClinicsController {
     }
 
     @Post()
-    createClinic(@Query() dto: ClinicCreateDto) {
+    createClinic(@Body() dto: ClinicCreateDto) {
         return this.clinicsService.createClinic(dto);
     }
 
     @Put(':id')
-    updateClinic(@Param('id') clinicId: string, @Query() dto: ClinicUpdateDto) {
+    updateClinic(@Param('id') clinicId: string, @Body() dto: ClinicUpdateDto) {
         return this.clinicsService.updateClinic(clinicId, dto);
     }
 

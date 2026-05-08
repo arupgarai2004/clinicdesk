@@ -1,126 +1,284 @@
 # ClinicDesk
 
-ClinicDesk is an Nx monorepo for a clinic appointment workflow. The repository currently contains a NestJS API, an Angular clinic dashboard, a Next.js patient-facing app, and shared libraries for models, API access, state, and layout components.
+ClinicDesk is an Nx monorepo for clinic operations and appointment management. The workspace currently includes:
 
-## What is in the repo
+- a NestJS API backed by Prisma and PostgreSQL
+- an Angular clinic dashboard for staff users
+- a Next.js patient app scaffold
+- shared Angular data-access, API, model, and layout libraries
+
+## Workspace overview
+
+### Applications
 
 - `apps/api`
-  NestJS backend with Prisma and PostgreSQL. Exposes appointment endpoints and an AI suggestion endpoint.
+  NestJS backend running on port `3333`
 - `apps/clinic-dashboard`
-  Angular dashboard for clinic staff. It loads appointment data from the API and renders the main admin experience.
+  Angular standalone dashboard for clinic staff
 - `apps/patient-web`
-  Next.js patient-facing app. This app is present in the workspace, but its main page is still scaffolded starter content rather than a full booking flow.
-- `libs/shared/models`
-  Shared TypeScript models for appointments and AI request/response shapes.
+  Next.js patient-facing app scaffold
+
+### Shared libraries
+
 - `libs/api`
-  Angular HTTP client service used by the dashboard.
+  Angular `HttpClient` services for appointments, clinics, and AI suggestions
 - `libs/data-access`
-  NGRX Signals store that coordinates appointment loading for the dashboard.
+  NgRx Signals stores for appointments, clinics, and AI suggestion state
+- `libs/shared/models`
+  Shared TypeScript models, DTOs, filters, and store state interfaces
 - `libs/ui-layout`
-  Shared Angular layout components such as header and footer.
+  Shared Angular layout components such as header and footer
 
-## Architecture
+## Current architecture
 
-The implemented request flow today is:
+### Appointment flow
 
 ```text
-Angular clinic dashboard
+Angular dashboard
   -> libs/data-access AppointmentStore
   -> libs/api AppointmentsService
   -> /api/appointments
-  -> NestJS appointments module
-  -> Prisma service
-  -> PostgreSQL
+  -> NestJS AppointmentsModule
+  -> PrismaService
+  -> PostgreSQL / Neon
 ```
 
-AI-assisted appointment suggestions follow a similar path:
+### Clinic master flow
 
 ```text
-Client
-  -> /ai/suggestAppointmentDetails
-  -> NestJS AI module
-  -> Google Gemini
-  -> JSON suggestion response
+Angular dashboard
+  -> libs/data-access ClinicStore
+  -> libs/api ClinicService
+  -> /api/clinics
+  -> NestJS ClinicsModule
+  -> PrismaService
+  -> PostgreSQL / Neon
 ```
 
-### App responsibilities
+### AI suggestion flow
 
-#### API
+```text
+Angular dashboard
+  -> libs/data-access AiStore
+  -> libs/api AiService
+  -> /api/ai/suggestAppointmentDetails
+  -> NestJS AiModule
+  -> Google Gemini
+```
 
-The API is a NestJS application bootstrapped from `apps/api/src/main.ts` and listens on port `3333`. CORS is enabled, environment variables are loaded from `apps/api/.env`, and Prisma is registered through a dedicated `PrismaModule`.
+## Backend
 
-Main modules:
+The API entrypoint is `apps/api/src/main.ts`.
+
+Current backend modules:
 
 - `AppointmentsModule`
-  Handles appointment listing, creation, and status updates.
+- `ClinicsModule`
 - `AiModule`
-  Generates scheduling suggestions such as recommended duration and preparation notes.
 
-Implemented endpoints:
+### Implemented appointment endpoints
 
 - `GET /appointments`
-  Returns appointments with optional `clinicId`, `date`, `status`, and `search` filters.
+  List appointments with optional `clinicId`, `date`, `status`, and `search` filters
+- `GET /appointments/:id`
+  Get one appointment
 - `POST /appointments`
-  Creates an appointment.
+  Create a new appointment
+- `PUT /appointments/:id`
+  Update an existing appointment
 - `PUT /appointments/:id/status`
-  Updates an appointment status.
+  Update only appointment status
+- `DELETE /appointments/:id`
+  Delete an appointment
+
+Appointment responses now include a lightweight clinic relation:
+
+```json
+{
+  "clinic": {
+    "id": "...",
+    "name": "ClinicDesk Amsterdam Central"
+  }
+}
+```
+
+### Implemented clinic endpoints
+
+- `GET /clinics`
+  List clinics with optional search filters
+- `GET /clinics/:id`
+  Get one clinic
+- `POST /clinics`
+  Create a clinic
+- `PUT /clinics/:id`
+  Update a clinic
+- `DELETE /clinics/:id`
+  Delete a clinic
+
+### Implemented AI endpoint
+
 - `POST /ai/suggestAppointmentDetails`
-  Returns AI-generated duration and prep guidance.
+  Returns:
 
-#### Clinic dashboard
+```json
+{
+  "suggestedDuration": 30,
+  "prepNotes": "Please check the patient history before the appointment.",
+  "confidence": "low"
+}
+```
 
-The clinic dashboard is an Angular application in `apps/clinic-dashboard`. It uses standalone components, Angular routing, hydration support, and an `/api` proxy to the backend running on `http://localhost:3333`.
+Notes about the current AI implementation:
 
-Current routes:
+- Gemini is used from the NestJS backend, not directly from Angular
+- the service tries Gemini models in sequence
+- if Gemini fails, the current implementation falls back to a default suggestion payload
+
+## Frontend
+
+The Angular clinic dashboard is the main working UI in this repository.
+
+### Current Angular routes
 
 - `/appointment-list`
 - `/appointment-details/:id`
+- `/manage-appointment`
+- `/manage-appointment/:id`
 - `/weekly-calendar`
 - `/settings`
 
-Current implementation status:
+### Current page status
 
-- `appointment-list` is the most complete screen. It loads appointments through a signal store and renders them with Angular CDK virtual scrolling for large result sets.
-- `appointment-details`, `weekly-calendar`, and `settings` routes exist, but their components are currently placeholders.
+#### Appointment list
 
-#### Patient web
+This is one of the most complete screens today.
 
-The patient app is a Next.js application in `apps/patient-web`. The project is wired into Nx and has build, dev, start, lint, and test targets. At the moment, the main page still contains default starter content, so the patient booking experience is not yet implemented in the UI.
+Implemented features:
 
-## Frontend design and UI structure
+- loads appointments from the API
+- client-side filters for:
+  - patient name
+  - clinic
+  - reason
+  - date
+  - status
+- CDK virtual scrolling
+- responsive Bootstrap-based layout
+- row navigation to appointment details
 
-The current UI design is functional and scaffold-first:
+#### Appointment details
 
-- The Angular dashboard is the main working frontend.
-- Shared Angular layout pieces live in `libs/ui-layout`.
-- Dashboard state is managed with `@ngrx/signals` in `libs/data-access`.
-- The appointments list focuses on performance with CDK virtual scrolling.
-- The Next.js patient app is still in starter state and should be treated as a foundation for future patient-facing design work.
+Implemented features:
 
-If you are onboarding to the project, it is best to think of ClinicDesk today as an API-first admin dashboard with an early-stage patient portal.
+- loads a selected appointment by id
+- shows core details such as patient, clinic, reason, status, and schedule
+- supports appointment actions from the page:
+  - update
+  - cancel
+  - delete
+- AI suggestion section is loaded on demand and cached in store during the current session
+
+#### Manage appointment
+
+Implemented as a create/edit form.
+
+- `/manage-appointment`
+  create mode
+- `/manage-appointment/:id`
+  edit mode
+
+Current features:
+
+- loads clinic options from the clinic store
+- validates required fields
+- validates date ordering
+- creates appointments
+- updates appointments
+
+#### Settings
+
+The settings page is now a simple operational entry screen for:
+
+- clinic management entry points
+- appointment management entry points
+- record counts for clinics and appointments
+
+#### Weekly calendar
+
+Route exists, but this page is still early compared to the appointment list and details flow.
+
+### Next.js patient app
+
+`apps/patient-web` is wired into the workspace and has Nx targets for build, lint, dev, start, and test.
+
+At the moment it is still mostly scaffold/starter content rather than a completed patient booking experience.
+
+## Shared library responsibilities
+
+### `libs/api`
+
+Current Angular services:
+
+- `AppointmentsService`
+- `ClinicService`
+- `AiService`
+
+These wrap dashboard HTTP calls to the backend.
+
+### `libs/data-access`
+
+Current stores:
+
+- `AppointmentStore`
+- `ClinicStore`
+- `AiStore`
+
+These stores manage client-side loading, selected records, and transient UI state.
+
+### `libs/shared/models`
+
+Contains shared interfaces and DTOs such as:
+
+- `Appointment`
+- `Clinic`
+- `CreateAppointmentDto`
+- `UpdateAppointmentDto`
+- `ClinicCreateDto`
+- `ClinicUpdateDto`
+- `AiAppointmentSuggestRequest`
+- `AiAppointmentSuggestResponse`
+- filter/query types
+- store state types
 
 ## Database design
 
-Prisma schema lives at `apps/api/prisma/schema.prisma`, and Prisma config lives at `apps/api/prisma.config.ts`.
+Prisma schema is at `apps/api/prisma/schema.prisma`.
 
-### Database
+Prisma config is at `apps/api/prisma.config.ts`.
 
-- Provider: PostgreSQL
-- Runtime adapter: `@prisma/adapter-pg`
-- Current environment points to Neon PostgreSQL
+### Database provider
 
-### Data model
+- PostgreSQL
+- Prisma adapter: `@prisma/adapter-pg`
+- current development setup targets Neon PostgreSQL
+
+### Prisma models
 
 #### `Clinic`
 
-Stores clinic metadata and schedule defaults.
+Clinic master table.
+
+Fields:
 
 - `id`
 - `name`
-- `email` (unique)
+- `address`
+- `email`
+- `phoneNumber`
 - `timezone`
-- `workingHours` as JSON
-- timestamps
+- `workingHours` (`Json`)
+- `createdAt`
+- `updatedAt`
 
 Relations:
 
@@ -129,7 +287,9 @@ Relations:
 
 #### `Appointment`
 
-Core booking entity.
+Main appointment transaction table.
+
+Fields:
 
 - `id`
 - `clinicId`
@@ -139,18 +299,21 @@ Core booking entity.
 - `startTime`
 - `endTime`
 - `status`
-- `cancelToken` (unique, optional)
-- `aiSuggestion` as JSON
-- timestamps
+- `cancelToken`
+- `aiSuggestion`
+- `createdAt`
+- `updatedAt`
 
 Indexes:
 
-- `(clinicId, startTime)` for calendar queries
-- `(clinicId, status)` for status filtering
+- `@@index([clinicId, startTime])`
+- `@@index([clinicId, status])`
 
 #### `Availability`
 
-Weekly operating hours per clinic and weekday.
+Weekly clinic availability.
+
+Fields:
 
 - `id`
 - `clinicId`
@@ -161,49 +324,32 @@ Weekly operating hours per clinic and weekday.
 
 Constraint:
 
-- unique per `(clinicId, dayOfWeek)`
+- `@@unique([clinicId, dayOfWeek])`
 
 #### `AppStatus`
-
-Appointment status enum values:
 
 - `PENDING`
 - `CONFIRMED`
 - `CANCELLED`
 - `COMPLETED`
 
-### Seed data
+## Seed data
 
-`apps/api/prisma/seed.ts` creates:
+`apps/api/prisma/seed.ts` currently seeds:
 
-- a demo clinic in Amsterdam
-- weekday availability
-- 100 sample appointments with mixed statuses
+- `10` clinics
+- `1000` appointments per clinic
+- `10,000` appointments total
+- weekday availability for each clinic
 
-## Shared libraries
+The seeded clinic master data includes:
 
-### `libs/shared/models`
-
-Defines shared interfaces used across the stack, including:
-
-- `Appointment`
-- `AppointmentFilters`
-- `AppointmentQuery`
-- `AppointmentState`
-- `AiAppointmentSuggestRequest`
-- `AiAppointmentSuggestResponse`
-
-### `libs/api`
-
-Contains the Angular service that calls the appointment API using `HttpClient`.
-
-### `libs/data-access`
-
-Contains `AppointmentStore`, implemented with `signalStore`, which:
-
-- manages loading state
-- fetches appointment data
-- stores the appointment list for dashboard screens
+- clinic name
+- address
+- email
+- phone number
+- timezone
+- working hours JSON
 
 ## Local development
 
@@ -211,19 +357,20 @@ Contains `AppointmentStore`, implemented with `signalStore`, which:
 
 - Node.js
 - npm
-- PostgreSQL connection string
+- a PostgreSQL / Neon connection string
 - Gemini API key for AI suggestions
 
 ### Environment
 
-The API reads environment variables from `apps/api/.env`.
+The API expects environment variables in `apps/api/.env`.
 
-Required values:
+Typical values:
 
 ```env
 DATABASE_URL=postgresql://...
-DIRECT_URL=postgresql://... # optional
+DIRECT_URL=postgresql://...
 GEMINI_API_KEY=your-key
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
 ### Install dependencies
@@ -232,90 +379,107 @@ GEMINI_API_KEY=your-key
 npm install
 ```
 
-### Start the backend
+### Run the API
 
 ```bash
 npm exec nx serve api
 ```
 
-The API runs on `http://localhost:3333`.
+API URL:
 
-### Start the clinic dashboard
+- `http://localhost:3333`
+
+### Run the Angular dashboard
 
 ```bash
 npm exec nx serve clinic-dashboard
 ```
 
-The dashboard runs on `http://localhost:4200` and proxies `/api` requests to the backend.
+Dashboard URL:
 
-### Start the patient app
+- `http://localhost:4200`
+
+The dashboard uses `apps/clinic-dashboard/proxy.conf.json` so `/api` calls can reach the backend.
+
+### Run the Next.js patient app
 
 ```bash
 npm exec nx dev patient-web
 ```
 
-The patient app runs on the Next.js dev server, typically `http://localhost:3000`.
+Typical URL:
+
+- `http://localhost:3000`
+
+## Database workflow
+
+If you change Prisma schema:
+
+```bash
+npx prisma db push
+npx prisma generate
+```
+
+If you need fresh local seed data:
+
+```bash
+npx prisma db seed
+```
+
+In this workspace, Prisma commands are usually run from `apps/api` when working with the local Prisma config there.
 
 ## Useful Nx commands
 
-```bash
-npm exec nx show projects
-npm exec nx graph
-npm exec nx build api
-npm exec nx build clinic-dashboard
-npm exec nx build patient-web
-npm exec nx test patient-web
-npm exec nx test clinic-dashboard
-npm exec nx run-many -t build
-```
-
-## Testing
-
-The workspace includes:
-
-- unit and integration-style tests for apps and libraries
-- Playwright e2e projects for `clinic-dashboard` and `patient-web`
-
-Examples:
+List projects:
 
 ```bash
-npm exec nx test clinic-dashboard
-npm exec nx test patient-web
-npm exec nx e2e clinic-dashboard-e2e
-npm exec nx e2e patient-web-e2e
+npx nx show projects
 ```
 
-## Current state summary
+Run API:
 
-Implemented well today:
-
-- NestJS API with Prisma/Postgres integration
-- clinic-facing Angular dashboard shell
-- appointment list retrieval and rendering
-- shared type models
-- AI suggestion endpoint
-
-Partially implemented or placeholder:
-
-- patient-facing Next.js booking experience
-- appointment details screen
-- weekly calendar screen
-- settings screen
-
-## Monorepo structure
-
-```text
-apps/
-  api/
-  clinic-dashboard/
-  clinic-dashboard-e2e/
-  patient-web/
-  patient-web-e2e/
-libs/
-  api/
-  data-access/
-  shared/
-    constants/
-    models/
-  ui-layout/
+```bash
+npx nx serve api
 ```
+
+Run Angular dashboard:
+
+```bash
+npx nx serve clinic-dashboard
+```
+
+Run patient app:
+
+```bash
+npx nx dev patient-web
+```
+
+Lint dashboard:
+
+```bash
+npx nx lint clinic-dashboard
+```
+
+Test dashboard:
+
+```bash
+npx nx test clinic-dashboard
+```
+
+Build API:
+
+```bash
+npx nx build api
+```
+
+Build dashboard:
+
+```bash
+npx nx build clinic-dashboard
+```
+
+## Current project summary
+
+ClinicDesk today is no longer just a starter Nx workspace. The backend supports appointments, clinic master data, and AI-assisted suggestions; the Angular dashboard now supports list, detail, create, and update flows for appointments; and the seed data is scaled to a realistic multi-clinic setup with `10,000` appointments.
+
+The patient-facing Next.js app is still the least developed part of the repository and should be treated as future-facing scaffolding for now.
