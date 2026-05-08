@@ -30,6 +30,7 @@ export class ManageClinic {
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
   readonly submitted = signal(false);
+  readonly workingHours = signal<workingHours[]>(this.getDefaultWorkingHours());
   readonly form = signal<ManageClinicForm>({
     name: '',
     email: '',
@@ -76,6 +77,9 @@ export class ManageClinic {
         timezone: clinic.timezone ?? 'Europe/Amsterdam',
         address: clinic.address ?? '',
       });
+      this.workingHours.set(
+        clinic.workingHours?.length ? clinic.workingHours : this.getDefaultWorkingHours()
+      );
     });
   }
 
@@ -87,6 +91,16 @@ export class ManageClinic {
 
   setField<K extends keyof ManageClinicForm>(key: K, value: ManageClinicForm[K]) {
     this.form.update((current) => ({ ...current, [key]: value }));
+    this.error.set(null);
+    this.success.set(null);
+  }
+
+  setWorkingHour(dayOfWeek: number, key: 'startTime' | 'endTime', value: string) {
+    this.workingHours.update((current) =>
+      current.map((shift) =>
+        shift.dayOfWeek === dayOfWeek ? { ...shift, [key]: value } : shift
+      )
+    );
     this.error.set(null);
     this.success.set(null);
   }
@@ -170,11 +184,15 @@ export class ManageClinic {
   }
 
   private getWorkingHours(): workingHours[] {
-    const existingWorkingHours = this.clinic()?.workingHours;
-    if (existingWorkingHours?.length) {
-      return existingWorkingHours;
-    }
+    return this.workingHours();
+  }
 
+  getDayName(dayOfWeek: number) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[dayOfWeek] ?? `Day ${dayOfWeek}`;
+  }
+
+  private getDefaultWorkingHours(): workingHours[] {
     return [
       { dayOfWeek: 1, startTime: '09:00', endTime: '17:00' },
       { dayOfWeek: 2, startTime: '09:00', endTime: '17:00' },

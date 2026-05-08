@@ -17,25 +17,9 @@ export class ClinicDetails {
   readonly clinicId = this.route.snapshot.paramMap.get('id');
   readonly clinic = computed(() => this.clinicStore.selectedClinic());
   readonly appointmentCount = computed(() => this.appointmentStore.appointments().length);
-
-  workingHours = () => {
-    const value = this.clinic()?.workingHours;
-    if (!value || typeof value !== 'object') return [];
-
-    const dayKeyToIndex: Record<string, number> = {
-      sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
-    };
-    return Object.entries(value)
-      .filter(([, hours]) => hours)
-      .map(([day, hours]) => {
-        const slot = hours as unknown as { start: string; end: string };
-        return {
-          dayOfWeek: dayKeyToIndex[day],
-          startTime: slot.start,
-          endTime: slot.end,
-        };
-      });
-  }
+  readonly workingHours = computed(() =>
+    [...(this.clinic()?.workingHours ?? [])].sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+  );
 
 
   constructor() {

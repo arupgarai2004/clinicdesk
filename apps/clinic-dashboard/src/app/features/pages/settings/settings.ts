@@ -16,12 +16,10 @@ export class Settings implements OnInit {
 
   readonly clinicCount = computed(() => this.clinicStore.clinics().length);
   readonly appointmentCount = computed(() => this.appointmentStore.appointments().length);
-  readonly workingHoursCount = computed(() => this.clinicStore.getWorkingHoursForClinic('cmo9ubxjo0000625jh5uuqvso').length);
 
   ngOnInit() {
     this.clinicStore.loadClinics();
     this.appointmentStore.loadAppointments();
-    this.clinicStore.getWorkingHoursForClinic('cmo9ubxjo0000625jh5uuqvso');
   }
 
   addClinic = () => {
@@ -38,14 +36,6 @@ export class Settings implements OnInit {
 
   addAppointment = () => {
     this.router.navigate(['/manage-appointment']);
-  }
-
-  manageWorkingHours = () => {
-    // Implementation for managing working hours  
-  }
-
-  addWorkingHours = () => {
-    // Implementation for adding working hours
   }
 
 }

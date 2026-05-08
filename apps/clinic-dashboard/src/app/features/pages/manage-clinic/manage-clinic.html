@@ -120,34 +120,33 @@
           </div>
         </div>
 
-        @if (clinic()?.workingHours?.length) {
-          <div class="row g-3">
-            @for (shift of clinic()!.workingHours; track shift.dayOfWeek) {
-              <div class="col-12 col-md-6 col-xl-4">
-                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                  <div class="text-secondary text-uppercase small mb-2">Day {{ shift.dayOfWeek }}</div>
-                  <div class="fw-semibold text-dark">{{ shift.startTime }} - {{ shift.endTime }}</div>
-                </div>
-              </div>
-            }
-          </div>
-        } @else {
-          <div class="row g-3">
+        <div class="row g-3">
+          @for (shift of workingHours(); track shift.dayOfWeek) {
             <div class="col-12 col-md-6 col-xl-4">
-              <label for="mondayStart" class="form-label">Monday start</label>
-              <input id="mondayStart" name="mondayStart" type="time" class="form-control" value="09:00" />
-            </div>
-            <div class="col-12 col-md-6 col-xl-4">
-              <label for="mondayEnd" class="form-label">Monday end</label>
-              <input id="mondayEnd" name="mondayEnd" type="time" class="form-control" value="17:00" />
-            </div>
-            <div class="col-12 col-xl-4 d-flex align-items-end">
-              <div class="text-secondary small">
-                Add the full weekly working-hours form here when the submit/update logic is ready.
+              <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                <div class="text-secondary text-uppercase small mb-2">{{ getDayName(shift.dayOfWeek) }}</div>
+                <label class="form-label small" [for]="'start-' + shift.dayOfWeek">Start</label>
+                <input
+                  class="form-control mb-2"
+                  [id]="'start-' + shift.dayOfWeek"
+                  type="time"
+                  [ngModel]="shift.startTime"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="setWorkingHour(shift.dayOfWeek, 'startTime', $event)"
+                />
+                <label class="form-label small" [for]="'end-' + shift.dayOfWeek">End</label>
+                <input
+                  class="form-control"
+                  [id]="'end-' + shift.dayOfWeek"
+                  type="time"
+                  [ngModel]="shift.endTime"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="setWorkingHour(shift.dayOfWeek, 'endTime', $event)"
+                />
               </div>
             </div>
-          </div>
-        }
+          }
+        </div>
       </div>
 
       <div class="d-flex flex-column flex-sm-row gap-2 mt-4">
