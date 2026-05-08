@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ClinicStore } from '@org/data-access';
@@ -20,7 +20,7 @@ interface ManageClinicForm {
   templateUrl: './manage-clinic.html',
   styleUrl: './manage-clinic.scss',
 })
-export class ManageClinic {
+export class ManageClinic implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly clinicStore = inject(ClinicStore);

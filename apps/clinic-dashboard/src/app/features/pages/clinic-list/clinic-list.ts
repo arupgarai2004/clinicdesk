@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ClinicStore } from '@org/data-access';
 
@@ -9,7 +9,7 @@ import { ClinicStore } from '@org/data-access';
   styleUrl: './clinic-list.scss',
   standalone: true,
 })
-export class ClinicList {
+export class ClinicList implements OnInit {
   readonly clinicStore = inject(ClinicStore);
   readonly router = inject(Router);
   readonly successMessage = signal<string | null>(null);
@@ -34,5 +34,4 @@ export class ClinicList {
       }
     }
   }
-  constructor() { }
 }

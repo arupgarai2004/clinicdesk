@@ -3,7 +3,6 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { AppointmentStore, AiStore } from '@org/data-access';
 import { Appointment, AppStatus } from '@org/models';
-import { App } from '../../../app';
 
 @Component({
   selector: 'app-appointment-details',
