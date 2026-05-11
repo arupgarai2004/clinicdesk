@@ -1,11 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { AppointmentStore, ClinicStore } from '@org/data-access';
 import { WeeklyCalendar } from './weekly-calendar';
+import { AppointmentStore, ClinicStore } from '@org/data-access';
 
 describe('WeeklyCalendar', () => {
   let component: WeeklyCalendar;
   let fixture: ComponentFixture<WeeklyCalendar>;
+  const loadClinics = vi.fn(async () => undefined);
+  const loadAppointments = vi.fn(async () => undefined);
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -14,8 +16,8 @@ describe('WeeklyCalendar', () => {
         {
           provide: ClinicStore,
           useValue: {
-            clinics: signal([]),
-            loadClinics: async () => undefined,
+            clinics: signal([{ id: 'clinic-1', name: 'City Clinic' }]),
+            loadClinics,
           },
         },
         {
@@ -24,7 +26,7 @@ describe('WeeklyCalendar', () => {
             appointments: signal([]),
             loading: signal(false),
             error: signal(null),
-            loadAppointments: async () => undefined,
+            loadAppointments,
           },
         },
       ],
@@ -32,7 +34,7 @@ describe('WeeklyCalendar', () => {
 
     fixture = TestBed.createComponent(WeeklyCalendar);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
