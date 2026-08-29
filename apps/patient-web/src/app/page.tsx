@@ -8,18 +8,28 @@ export default async function Index() {
 
   return (
     <div className={styles.page}>
-      <div className="wrapper">
-        <div className="container">
-          <h1>Welcome to the Patient Web App</h1>
-          <p>Clinic Name: {clinic.name}</p>
-          <p>Clinic Address: {clinic.address}</p>
-          <p>Clinic Phone: {clinic.phone}</p>
-          <p>Clinic Email: {clinic.email}</p>
+      <div className={styles.wrapper}>
+        <div className={styles.container}>
+          <div className={styles.header}>
+            <div>
+              <div className={styles.title}>Patient Portal</div>
+              <div className={styles.placeholder}>Clinic Details</div>
+            </div>
+          </div>
 
-
-          
-
-  
+          <div className={styles['clinic-card']}>
+            {clinic ? (
+              <div>
+                <div className={styles['clinic-name']}>{clinic?.name}</div>
+                <div className={styles.meta}>{clinic?.address}</div>
+                <div className={styles.meta}>{clinic?.phoneNumber }</div>
+                <div className={styles.meta}>{clinic?.email}</div>
+                <div><a href="/book" className={styles['book-appointment']}>Book an Appointment</a></div>
+              </div>
+            ) : (
+              <div className={styles.placeholder}>Clinic information not available right now.</div>
+            )}
+          </div>
         </div>
       </div>
     </div>
