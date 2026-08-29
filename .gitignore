@@ -52,6 +52,10 @@ vitest.config.*.timestamp*
 
 .nx/polygraph
 
+.codex
+.cursor
+.gemini
+.opencode
 # Next.js
 .next
 out
