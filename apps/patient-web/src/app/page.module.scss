@@ -57,3 +57,24 @@
 .placeholder {
 	color: #94a3b8;
 }
+
+.appointment-link {
+    display: flex;
+	justify-content: flex-end;
+	margin-top: 0.5rem;
+}
+
+.book-appointment {
+	display: inline-block;
+	margin-top: 0.5rem;
+	padding: 0.45rem 0.75rem;
+	background: #0ea5a4;
+	color: #fff;
+	border-radius: 6px;
+	text-decoration: none;
+	font-weight: 600;
+}
+
+.book-appointment:hover {
+	background: #08969a;
+}

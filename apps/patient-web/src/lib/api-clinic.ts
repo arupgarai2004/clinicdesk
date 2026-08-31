@@ -5,8 +5,8 @@ import { Clinic } from "@org/models";
   process.env.API_BASE_URL ?? 'http://localhost:3333/clinics';
 
 
-export const getClinic = async (clinicId: string): Promise<Clinic> => {   
-      const response = await fetch(`${CLINIC_BASE_API_URL}/${clinicId}`, {
+export const getClinics = async (): Promise<Clinic[]> => {   
+      const response = await fetch(`${CLINIC_BASE_API_URL}/`, {
     next: { revalidate: 60 },
   });
 

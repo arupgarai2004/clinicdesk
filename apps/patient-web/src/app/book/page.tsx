@@ -1,4 +1,11 @@
+'use client';
+
+import { useParams } from "next/navigation";
+
+
 export default function BookPage() {
+      const { clinicId } = useParams<{ clinicId: string }>();
+
 	return (
 		<div>
 			<h1>Book an Appointment</h1>
@@ -26,12 +33,7 @@ export default function BookPage() {
                     </div>
                    <div>
                     <label htmlFor="clinic">Clinic:</label>
-                    <select id="clinic" name="clinic" required>
-                        <option value="">Select a clinic</option>
-                        <option value="clinic1">Clinic 1</option>
-                        <option value="clinic2">Clinic 2</option>
-                        <option value="clinic3">Clinic 3</option>
-                    </select>
+                    <div>{clinicId}</div>
                     </div>
                     <div>
                     <button type="submit">Book Appointment</button>
