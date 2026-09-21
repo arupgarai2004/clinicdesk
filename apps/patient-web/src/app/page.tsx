@@ -1,8 +1,28 @@
+"use client";
+import { useEffect, useState } from 'react';
 import styles from './page.module.scss';
 import { getClinics } from '../lib/api-clinic';
+import { Clinic } from '@org/models';
 
-export default async function Index() {
-  const clinics = await getClinics();
+export default function Index() {
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [allClinics, setAllClinics] = useState<Clinic[]>([]);
+
+  useEffect(() => {
+    getClinics().then((data) => {
+      setAllClinics(data);
+      setClinics(data);
+    });
+  }, []);
+
+  function filterClinics(event: React.ChangeEvent<HTMLInputElement>) {
+    const searchTerm = event.target.value.toLowerCase();
+    const filtered = allClinics.filter((clinic) =>
+      clinic.name.toLowerCase().includes(searchTerm)
+    );
+    setClinics(filtered);
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.wrapper}>
@@ -12,8 +32,15 @@ export default async function Index() {
               <div className={styles.title}>Patient Portal</div>
               <div className={styles.placeholder}>Clinic List</div>
             </div>
+            <div>
+               <input
+                className={styles.input}
+                type="text"
+                placeholder="Search clinics..."
+                onChange={filterClinics}
+              />
+            </div>
           </div>
-       
           <div className={styles['clinic-card']}>
             {clinics && clinics.length > 0 ? (
               clinics.map((clinic) => (
@@ -21,9 +48,7 @@ export default async function Index() {
                   <div className={styles['clinic-name']}>{clinic?.name}</div>
                   <div className={styles.meta}>{clinic?.address}</div>
                   <div className={styles.meta}>{clinic?.phoneNumber}</div>
-                  <div className={styles.meta} mailto={clinic?.email}>
-                    {clinic?.email}
-                  </div>
+                  <div className={styles.meta}>{clinic?.email}</div>
                   <div className={styles['appointment-link']}>
                     <a href={`/book/${clinic.id}`} className={styles['book-appointment']}>
                       Book an Appointment
