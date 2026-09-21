@@ -15,3 +15,14 @@ export const getClinics = async (): Promise<Clinic[]> => {
     }
     return response.json();
 };
+
+export const getClinicById = async (id: string): Promise<Clinic> => {
+    const response = await fetch(`${CLINIC_BASE_API_URL}/${id}`, {
+        next: { revalidate: 60 },
+    });
+
+    if (!response.ok) {
+        throw new Error(`Error fetching clinic by ID: ${response.statusText}`);
+    }
+    return response.json();
+};
