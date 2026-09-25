@@ -1,0 +1,602 @@
+openapi: 3.0.3
+info:
+  title: ClinicDesk API
+  version: 1.0.0
+  description: |
+    HTTP API for clinics, doctors, and appointments.
+    Each clinic has one doctor. Creating an appointment attaches that clinic's doctor.
+servers:
+  - url: http://localhost:3333
+    description: Local API
+
+tags:
+  - name: Clinics
+  - name: Doctors
+  - name: Appointments
+  - name: AI
+
+paths:
+  /clinics:
+    get:
+      tags: [Clinics]
+      summary: List clinics
+      operationId: listClinics
+      parameters:
+        - $ref: '#/components/parameters/ClinicSearch'
+      responses:
+        '200':
+          description: Clinics matching the search. An empty search returns every clinic.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Clinic'
+    post:
+      tags: [Clinics]
+      summary: Create a clinic
+      operationId: createClinic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClinicCreate'
+      responses:
+        '201':
+          description: Created clinic.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Clinic'
+
+  /clinics/{id}:
+    get:
+      tags: [Clinics]
+      summary: Get a clinic
+      operationId: getClinic
+      parameters:
+        - $ref: '#/components/parameters/ClinicId'
+      responses:
+        '200':
+          description: The clinic, or null when the id does not exist.
+          content:
+            application/json:
+              schema:
+                nullable: true
+                allOf:
+                  - $ref: '#/components/schemas/Clinic'
+    put:
+      tags: [Clinics]
+      summary: Update a clinic
+      operationId: updateClinic
+      parameters:
+        - $ref: '#/components/parameters/ClinicId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClinicUpdate'
+      responses:
+        '200':
+          description: Updated clinic.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Clinic'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Clinics]
+      summary: Delete a clinic
+      description: Deletes the clinic, its doctor, and its appointments.
+      operationId: deleteClinic
+      parameters:
+        - $ref: '#/components/parameters/ClinicId'
+      responses:
+        '200':
+          description: Deleted clinic.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Clinic'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /doctors:
+    get:
+      tags: [Doctors]
+      summary: List doctors
+      operationId: listDoctors
+      responses:
+        '200':
+          description: Every doctor. There is one doctor per clinic.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Doctor'
+
+  /doctors/clinic/{clinicId}:
+    get:
+      tags: [Doctors]
+      summary: Get the doctor for a clinic
+      operationId: getDoctorByClinic
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The clinic's doctor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Doctor'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /doctors/{id}:
+    get:
+      tags: [Doctors]
+      summary: Get a doctor
+      operationId: getDoctor
+      parameters:
+        - $ref: '#/components/parameters/DoctorId'
+      responses:
+        '200':
+          description: The doctor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Doctor'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /appointments:
+    get:
+      tags: [Appointments]
+      summary: List appointments
+      operationId: listAppointments
+      parameters:
+        - name: clinicId
+          in: query
+          schema:
+            type: string
+          description: Limit results to one clinic.
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+            example: '2026-01-15'
+          description: Appointments whose start time falls on this calendar day.
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/AppStatus'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Case-insensitive match on patient name, patient email, or reason.
+      responses:
+        '200':
+          description: Appointments ordered by start time, with clinic and doctor summaries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AppointmentDetails'
+    post:
+      tags: [Appointments]
+      summary: Create an appointment
+      description: The server sets doctorId to the doctor that belongs to clinicId.
+      operationId: createAppointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreate'
+      responses:
+        '201':
+          description: Created appointment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '404':
+          description: The clinic has no doctor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /appointments/{id}:
+    get:
+      tags: [Appointments]
+      summary: Get an appointment
+      operationId: getAppointment
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      responses:
+        '200':
+          description: The appointment, including clinic contact details and the doctor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Appointments]
+      summary: Update an appointment
+      description: When clinicId changes, the appointment is linked to that clinic's doctor.
+      operationId: updateAppointment
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentUpdate'
+      responses:
+        '200':
+          description: Updated appointment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Appointments]
+      summary: Delete an appointment
+      operationId: deleteAppointment
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      responses:
+        '200':
+          description: Deleted appointment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /appointments/{id}/status:
+    put:
+      tags: [Appointments]
+      summary: Update appointment status
+      operationId: updateAppointmentStatus
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+        - name: status
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AppStatus'
+      responses:
+        '200':
+          description: Appointment with the new status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /ai/suggestAppointmentDetails:
+    post:
+      tags: [AI]
+      summary: Suggest appointment duration and preparation notes
+      operationId: suggestAppointmentDetails
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiSuggestionRequest'
+      responses:
+        '200':
+          description: Suggested duration, preparation notes, and confidence.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiSuggestion'
+
+components:
+  parameters:
+    ClinicId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Clinic id. On `/doctors/clinic/{clinicId}` the path parameter name is clinicId.
+    DoctorId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    AppointmentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    ClinicSearch:
+      name: search
+      in: query
+      schema:
+        type: string
+      description: Case-insensitive match on clinic name, address, email, or phone number.
+
+  responses:
+    NotFound:
+      description: The record was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    AppStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, CANCELLED, COMPLETED]
+
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 404
+        message:
+          type: string
+        error:
+          type: string
+          example: Not Found
+
+    WorkingHours:
+      type: object
+      required: [dayOfWeek, startTime, endTime]
+      properties:
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+          description: 0 is Sunday, 6 is Saturday.
+        startTime:
+          type: string
+          example: '09:00'
+        endTime:
+          type: string
+          example: '17:00'
+
+    Clinic:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        email:
+          type: string
+          format: email
+        phoneNumber:
+          type: string
+        timezone:
+          type: string
+          example: Europe/Amsterdam
+        workingHours:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkingHours'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ClinicCreate:
+      type: object
+      required: [name, address, email, phoneNumber, timezone, workingHours]
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        email:
+          type: string
+          format: email
+        phoneNumber:
+          type: string
+        timezone:
+          type: string
+          example: Europe/Amsterdam
+        workingHours:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkingHours'
+
+    ClinicUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        email:
+          type: string
+          format: email
+        phoneNumber:
+          type: string
+        timezone:
+          type: string
+        workingHours:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkingHours'
+
+    Doctor:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        name:
+          type: string
+          example: Dr. Ahuja
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        doctorId:
+          type: string
+        patientName:
+          type: string
+        patientEmail:
+          type: string
+          format: email
+        reason:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/AppStatus'
+        cancelToken:
+          type: string
+          nullable: true
+        aiSuggestion:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/AiSuggestion'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AppointmentDetails:
+      allOf:
+        - $ref: '#/components/schemas/Appointment'
+        - type: object
+          properties:
+            clinic:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                address:
+                  type: string
+                phoneNumber:
+                  type: string
+            doctor:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+
+    AppointmentCreate:
+      type: object
+      required: [clinicId, patientName, patientEmail, reason, startTime, endTime]
+      properties:
+        clinicId:
+          type: string
+        patientName:
+          type: string
+        patientEmail:
+          type: string
+          format: email
+        reason:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/AppStatus'
+
+    AppointmentUpdate:
+      type: object
+      properties:
+        clinicId:
+          type: string
+        patientName:
+          type: string
+        patientEmail:
+          type: string
+          format: email
+        reason:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/AppStatus'
+
+    AiSuggestionRequest:
+      type: object
+      required: [appointmentId, patientName, reason]
+      properties:
+        appointmentId:
+          type: string
+        patientName:
+          type: string
+        reason:
+          type: string
+
+    AiSuggestion:
+      type: object
+      properties:
+        suggestedDuration:
+          type: integer
+          enum: [15, 30, 45, 60]
+        prepNotes:
+          type: string
+        confidence:
+          type: string
+          enum: [low, medium, high]

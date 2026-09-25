@@ -21,9 +21,6 @@ export class ClinicDetails {
     [...(this.clinic()?.workingHours ?? [])].sort((a, b) => a.dayOfWeek - b.dayOfWeek)
   );
 
-  
-
-
   constructor() {
     effect(() => {
       if (this.clinicId) {
