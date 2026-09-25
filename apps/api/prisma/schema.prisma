@@ -24,6 +24,7 @@ model Clinic {
 
   appointments Appointment[]
   availability Availability[]
+  doctor       Doctor?
 }
 
 // ── Appointment ──────────────────────────────────────────────────────────
@@ -41,11 +42,15 @@ model Appointment {
   cancelToken  String?     @unique   // signed token for email cancel link
   aiSuggestion Json?       // { suggestedDuration: 30, prepNotes: '...' }
 
+  doctor       Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId     String
+
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
   @@index([clinicId, startTime])   // fast calendar queries
   @@index([clinicId, status])      // fast status filter
+  @@index([doctorId])
 }
 
 // ── Availability ─────────────────────────────────────────────────────────
@@ -68,4 +73,18 @@ enum AppStatus {
   CONFIRMED
   CANCELLED
   COMPLETED
+}
+
+// ── Doctor ───────────────────────────────────────────────────────────────
+// One doctor per clinic. clinicId is unique so a clinic cannot have two doctors.
+model Doctor {
+  id        String   @id @default(cuid())
+  clinicId  String   @unique
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments Appointment[]
 }

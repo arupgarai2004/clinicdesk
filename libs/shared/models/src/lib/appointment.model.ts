@@ -27,6 +27,13 @@ export interface Appointment {
   clinic?: {
     id: string;
     name: string;
+    address: string;
+    phoneNumber: string;
+  };
+  doctor?: {
+    id: string;
+    name: string;
+    email: string;
   };
 }
 

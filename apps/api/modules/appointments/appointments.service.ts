@@ -41,6 +41,9 @@ export class AppointmentsService {
             name: true,
           },
         },
+        doctor: {
+          select: { id: true, name: true, email: true },
+        },
       },
     });
     return appointments;
@@ -55,7 +58,12 @@ export class AppointmentsService {
           select: {
             id: true,
             name: true,
+            address: true,
+            phoneNumber: true
           },
+        },
+        doctor: {
+          select: { id: true, name: true, email: true },
         },
       },
     });
@@ -65,9 +73,11 @@ export class AppointmentsService {
 
   // ── Create ──────────────────────────────────────────────────────────────
   async create(dto: CreateAppointmentDto) {
+    const doctor = await this.doctorForClinic(dto.clinicId);
     return this.prisma.appointment.create({
       data: {
         clinicId: dto.clinicId,
+        doctorId: doctor.id,
         patientName: dto.patientName,
         patientEmail: dto.patientEmail,
         reason: dto.reason,
@@ -79,6 +89,7 @@ export class AppointmentsService {
   }
 
   async update(id: string, dto: UpdateAppointmentDto) {
+    const doctor = dto.clinicId ? await this.doctorForClinic(dto.clinicId) : undefined;
     const updatePayload: Prisma.AppointmentUpdateInput = {
       patientName: dto.patientName,
       patientEmail: dto.patientEmail,
@@ -87,6 +98,7 @@ export class AppointmentsService {
       startTime: dto.startTime ? new Date(dto.startTime) : undefined,
       endTime: dto.endTime ? new Date(dto.endTime) : undefined,
       clinic: dto.clinicId ? { connect: { id: dto.clinicId } } : undefined,
+      doctor: doctor ? { connect: { id: doctor.id } } : undefined,
     };
 
     return this.prisma.appointment.update({
@@ -113,6 +125,12 @@ export class AppointmentsService {
       where: { id: appt.id },
       data: { status: 'CANCELLED' },
     });
+  }
+
+  private async doctorForClinic(clinicId: string) {
+    const doctor = await this.prisma.doctor.findUnique({ where: { clinicId } });
+    if (!doctor) throw new NotFoundException(`No doctor found for clinic ${clinicId}`);
+    return doctor;
   }
 
   // ── Delete appointment ─────────────────────────────────────────────────

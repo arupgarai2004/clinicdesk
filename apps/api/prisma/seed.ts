@@ -91,6 +91,19 @@ const clinicSeeds = [
   },
 ].slice(0, TOTAL_CLINICS);
 
+const doctorSeeds = [
+  { name: 'Dr. Ahuja', email: 'dr.ahuja@clinicdesk.com' },
+  { name: 'Dr. Meyer', email: 'dr.meyer@clinicdesk.com' },
+  { name: 'Dr. Janssen', email: 'dr.janssen@clinicdesk.com' },
+  { name: 'Dr. Bakker', email: 'dr.bakker@clinicdesk.com' },
+  { name: 'Dr. Visser', email: 'dr.visser@clinicdesk.com' },
+  { name: 'Dr. de Boer', email: 'dr.deboer@clinicdesk.com' },
+  { name: 'Dr. Mulder', email: 'dr.mulder@clinicdesk.com' },
+  { name: 'Dr. de Groot', email: 'dr.degroot@clinicdesk.com' },
+  { name: 'Dr. Bos', email: 'dr.bos@clinicdesk.com' },
+  { name: 'Dr. Vos', email: 'dr.vos@clinicdesk.com' },
+].slice(0, TOTAL_CLINICS);
+
 const patientNames = [
   'Priya Sharma', 'Jan de Vries', 'Maria Santos', 'Aiden Chen', 'Sophia Patel',
   'Luca Russo', 'Mia Hernandez', 'Noah Johnson', 'Emma Brown', 'Oliver Lee',
@@ -117,7 +130,7 @@ const reasons = [
 
 const statuses: AppStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED'];
 
-function buildAppointments(clinicId: string, clinicIndex: number) {
+function buildAppointments(clinicId: string, doctorId: string, clinicIndex: number) {
   return Array.from({ length: APPOINTMENTS_PER_CLINIC }, (_, appointmentIndex) => {
     const baseDate = new Date('2026-01-01T08:00:00Z');
     const clinicOffset = clinicIndex * APPOINTMENTS_PER_CLINIC * SLOT_MS;
@@ -131,6 +144,7 @@ function buildAppointments(clinicId: string, clinicIndex: number) {
 
     return {
       clinicId,
+      doctorId,
       patientName,
       patientEmail: `${emailName}.${clinicIndex + 1}.${appointmentIndex + 1}@test.com`,
       reason,
@@ -153,9 +167,9 @@ async function insertInChunks<T>(rows: T[]) {
 }
 
 async function main() {
-  const seededClinics = [];
+  const seededClinics: { id: string; name: string; doctorId: string }[] = [];
 
-  for (const clinicInput of clinicSeeds) {
+  for (const [clinicIndex, clinicInput] of clinicSeeds.entries()) {
     const clinic = await prisma.clinic.upsert({
       where: { email: clinicInput.email },
       update: {
@@ -195,7 +209,21 @@ async function main() {
       });
     }
 
-    seededClinics.push(clinic);
+    const doctorInput = doctorSeeds[clinicIndex];
+    const doctor = await prisma.doctor.upsert({
+      where: { clinicId: clinic.id },
+      update: {
+        name: doctorInput.name,
+        email: doctorInput.email,
+      },
+      create: {
+        clinicId: clinic.id,
+        name: doctorInput.name,
+        email: doctorInput.email,
+      },
+    });
+
+    seededClinics.push({ id: clinic.id, name: clinic.name, doctorId: doctor.id });
   }
 
   const clinicIds = seededClinics.map((clinic) => clinic.id);
@@ -207,7 +235,7 @@ async function main() {
   });
 
   for (const [clinicIndex, clinic] of seededClinics.entries()) {
-    const appointments = buildAppointments(clinic.id, clinicIndex);
+    const appointments = buildAppointments(clinic.id, clinic.doctorId, clinicIndex);
     await insertInChunks(appointments);
     console.log(`Seeded ${appointments.length} appointments for ${clinic.name} (${clinic.id})`);
   }
