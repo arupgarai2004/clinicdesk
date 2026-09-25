@@ -10,7 +10,9 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
   app.enableCors();
-  await app.listen(3333);
-  console.log('API running on http://localhost:3333');
+  const port = Number(process.env.PORT) || 3333;
+  const host = process.env.HOST || '0.0.0.0';
+  await app.listen(port, host);
+  console.log(`API running on http://${host}:${port}`);
 }
 bootstrap();
