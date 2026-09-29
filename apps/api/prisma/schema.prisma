@@ -25,6 +25,7 @@ model Clinic {
   appointments Appointment[]
   availability Availability[]
   doctor       Doctor?
+  users        User[]
 }
 
 // ── Appointment ──────────────────────────────────────────────────────────
@@ -33,6 +34,8 @@ model Appointment {
   clinic       Clinic      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   clinicId     String
 
+  patient      User?       @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  patientId    String?
   patientName  String
   patientEmail String
   reason       String
@@ -51,6 +54,7 @@ model Appointment {
   @@index([clinicId, startTime])   // fast calendar queries
   @@index([clinicId, status])      // fast status filter
   @@index([doctorId])
+  @@index([patientId])
 }
 
 // ── Availability ─────────────────────────────────────────────────────────
@@ -87,4 +91,45 @@ model Doctor {
   updatedAt DateTime @updatedAt
 
   appointments Appointment[]
+}
+
+// ── User / roles ─────────────────────────────────────────────────────────
+enum UserRole {
+  SUPER_ADMIN
+  CLINIC
+  PATIENT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole
+  isActive     Boolean  @default(true)
+
+  // Required for CLINIC users. Null for SUPER_ADMIN and PATIENT.
+  clinicId     String?
+  clinic       Clinic?  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  appointments Appointment[]
+  refreshTokens RefreshToken[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([clinicId])
+  @@index([role])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }

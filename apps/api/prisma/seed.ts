@@ -1,5 +1,6 @@
 import 'dotenv/config';
-import { PrismaClient, AppStatus } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import { PrismaClient, AppStatus, UserRole } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
@@ -9,6 +10,7 @@ const APPOINTMENTS_PER_CLINIC = 1000;
 const TOTAL_CLINICS = 10;
 const SLOT_MS = 30 * 60 * 1000;
 const INSERT_CHUNK_SIZE = 1000;
+const SEED_PASSWORD = 'ClinicDesk!23';
 
 const workingHours = {
   mon: { start: '09:00', end: '17:00' },
@@ -104,13 +106,12 @@ const doctorSeeds = [
   { name: 'Dr. Vos', email: 'dr.vos@clinicdesk.com' },
 ].slice(0, TOTAL_CLINICS);
 
-const patientNames = [
-  'Priya Sharma', 'Jan de Vries', 'Maria Santos', 'Aiden Chen', 'Sophia Patel',
-  'Luca Russo', 'Mia Hernandez', 'Noah Johnson', 'Emma Brown', 'Oliver Lee',
-  'Ava Wang', 'Elijah Taylor', 'Isabella Miller', 'Lucas Davis', 'Amelia Wilson',
-  'Ethan Moore', 'Harper Martin', 'Mason Clark', 'Charlotte Lewis', 'Logan White',
-  'Ella Baker', 'James Walker', 'Fatima Khan', 'Daniel Young', 'Grace Allen',
-  'Benjamin Hall', 'Nora King', 'Samuel Scott', 'Lily Green', 'David Adams',
+const patientSeeds = [
+  { name: 'Priya Sharma', email: 'priya.sharma@test.com' },
+  { name: 'Jan de Vries', email: 'jan.devries@test.com' },
+  { name: 'Maria Santos', email: 'maria.santos@test.com' },
+  { name: 'Aiden Chen', email: 'aiden.chen@test.com' },
+  { name: 'Sophia Patel', email: 'sophia.patel@test.com' },
 ];
 
 const reasons = [
@@ -130,23 +131,28 @@ const reasons = [
 
 const statuses: AppStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED'];
 
-function buildAppointments(clinicId: string, doctorId: string, clinicIndex: number) {
+function buildAppointments(
+  clinicId: string,
+  doctorId: string,
+  clinicIndex: number,
+  patients: { id: string; name: string; email: string }[],
+) {
   return Array.from({ length: APPOINTMENTS_PER_CLINIC }, (_, appointmentIndex) => {
     const baseDate = new Date('2026-01-01T08:00:00Z');
     const clinicOffset = clinicIndex * APPOINTMENTS_PER_CLINIC * SLOT_MS;
     const startTime = new Date(baseDate.getTime() + clinicOffset + appointmentIndex * SLOT_MS);
     const endTime = new Date(startTime.getTime() + SLOT_MS);
 
-    const patientName = patientNames[(clinicIndex * 7 + appointmentIndex) % patientNames.length];
+    const patient = patients[(clinicIndex * 7 + appointmentIndex) % patients.length];
     const reason = reasons[(clinicIndex * 5 + appointmentIndex) % reasons.length];
     const status = statuses[(clinicIndex + appointmentIndex) % statuses.length];
-    const emailName = patientName.toLowerCase().replace(/\s+/g, '.');
 
     return {
       clinicId,
       doctorId,
-      patientName,
-      patientEmail: `${emailName}.${clinicIndex + 1}.${appointmentIndex + 1}@test.com`,
+      patientId: patient.id,
+      patientName: patient.name,
+      patientEmail: patient.email,
       reason,
       startTime,
       endTime,
@@ -167,7 +173,25 @@ async function insertInChunks<T>(rows: T[]) {
 }
 
 async function main() {
+  const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
   const seededClinics: { id: string; name: string; doctorId: string }[] = [];
+
+  await prisma.user.upsert({
+    where: { email: 'admin@clinicdesk.com' },
+    update: {
+      name: 'Super Admin',
+      passwordHash,
+      role: UserRole.SUPER_ADMIN,
+      clinicId: null,
+      isActive: true,
+    },
+    create: {
+      email: 'admin@clinicdesk.com',
+      name: 'Super Admin',
+      passwordHash,
+      role: UserRole.SUPER_ADMIN,
+    },
+  });
 
   for (const [clinicIndex, clinicInput] of clinicSeeds.entries()) {
     const clinic = await prisma.clinic.upsert({
@@ -223,7 +247,46 @@ async function main() {
       },
     });
 
+    await prisma.user.upsert({
+      where: { email: clinic.email },
+      update: {
+        name: `${clinic.name} Staff`,
+        passwordHash,
+        role: UserRole.CLINIC,
+        clinicId: clinic.id,
+        isActive: true,
+      },
+      create: {
+        email: clinic.email,
+        name: `${clinic.name} Staff`,
+        passwordHash,
+        role: UserRole.CLINIC,
+        clinicId: clinic.id,
+      },
+    });
+
     seededClinics.push({ id: clinic.id, name: clinic.name, doctorId: doctor.id });
+  }
+
+  const patients: { id: string; name: string; email: string }[] = [];
+  for (const patientInput of patientSeeds) {
+    const patient = await prisma.user.upsert({
+      where: { email: patientInput.email },
+      update: {
+        name: patientInput.name,
+        passwordHash,
+        role: UserRole.PATIENT,
+        clinicId: null,
+        isActive: true,
+      },
+      create: {
+        email: patientInput.email,
+        name: patientInput.name,
+        passwordHash,
+        role: UserRole.PATIENT,
+      },
+    });
+    patients.push({ id: patient.id, name: patient.name, email: patient.email });
   }
 
   const clinicIds = seededClinics.map((clinic) => clinic.id);
@@ -235,12 +298,15 @@ async function main() {
   });
 
   for (const [clinicIndex, clinic] of seededClinics.entries()) {
-    const appointments = buildAppointments(clinic.id, clinic.doctorId, clinicIndex);
+    const appointments = buildAppointments(clinic.id, clinic.doctorId, clinicIndex, patients);
     await insertInChunks(appointments);
     console.log(`Seeded ${appointments.length} appointments for ${clinic.name} (${clinic.id})`);
   }
 
-  console.log(`Seed complete: ${seededClinics.length} clinics and ${seededClinics.length * APPOINTMENTS_PER_CLINIC} appointments`);
+  console.log(
+    `Seed complete: ${seededClinics.length} clinics, ${patients.length} patients, and ${seededClinics.length * APPOINTMENTS_PER_CLINIC} appointments`,
+  );
+  console.log(`Seed login password for all users: ${SEED_PASSWORD}`);
 }
 
 main()

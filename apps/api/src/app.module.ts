@@ -7,6 +7,7 @@ import { AppointmentsModule } from '../modules/appointments/appointments.module'
 import { AiModule } from '../modules/ai/ai.module';
 import { ClinicsModule } from '../modules/clinics/clinics.module';
 import { DoctorsModule } from '../modules/doctors/doctors.module';
+import { AuthModule } from '../modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -18,7 +19,8 @@ import { DoctorsModule } from '../modules/doctors/doctors.module';
     AppointmentsModule,
     AiModule,
     ClinicsModule,
-    DoctorsModule
+    DoctorsModule,
+    AuthModule,
   ],
   controllers: [AppController],
 })
