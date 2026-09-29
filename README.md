@@ -66,15 +66,101 @@ Angular dashboard
   -> Google Gemini
 ```
 
+### Auth flow
+
+```text
+Client
+  -> POST /auth/login
+  -> NestJS AuthModule
+  -> bcrypt password check
+  -> JWT access + refresh tokens
+  -> RefreshToken row (hashed) in PostgreSQL / Neon
+```
+
 ## Backend
 
 The API entrypoint is `apps/api/src/main.ts`.
 
+Roles currently used by `User.role`:
+
+- `SUPER_ADMIN` — platform-wide access (JWT guards on appointment/clinic routes are still being added)
+- `CLINIC` — scoped to one clinic via `User.clinicId`
+- `PATIENT` — self-signup, booking, and own appointments
+
 Current backend modules:
 
+- `AuthModule`
 - `AppointmentsModule`
 - `ClinicsModule`
+- `DoctorsModule`
 - `AiModule`
+
+### Implemented auth endpoints
+
+Auth lives in `apps/api/modules/auth/`.
+
+- `POST /auth/register`
+  Patient self-signup only. Ignores `role` and `clinicId` from the body.
+- `POST /auth/createUser`
+  Creates a user with an explicit role (including clinic staff). Clinic users must include a valid `clinicId`.
+- `POST /auth/login`
+  Validates email/password and returns the public user plus JWT tokens.
+- `POST /auth/refresh`
+  Exchanges a valid refresh token for a new access/refresh pair. The previous refresh token is revoked.
+- `POST /auth/logout`
+  Revokes the supplied refresh token.
+- `GET /auth/user/:id`
+  Returns a public user (no password hash).
+
+Register body:
+
+```json
+{
+  "email": "new.patient@test.com",
+  "password": "Abc@123PassWord",
+  "name": "New Patient"
+}
+```
+
+Login body:
+
+```json
+{
+  "email": "priya.sharma@test.com",
+  "password": "clicnic@password"
+}
+```
+
+Login / refresh response:
+
+```json
+{
+  "user": {
+    "id": "...",
+    "email": "priya.sharma@test.com",
+    "name": "Priya Sharma",
+    "role": "PATIENT",
+    "clinicId": null,
+    "isActive": true
+  },
+  "accessToken": "...",
+  "refreshToken": "..."
+}
+```
+
+Token notes:
+
+- `accessToken` is a JWT (15 minutes). Send it later as `Authorization: Bearer <accessToken>`.
+- `refreshToken` is a JWT (7 days). It is stored hashed in `RefreshToken` and can be revoked.
+- Failed login always returns `401` with `Invalid email or password` (it does not reveal whether the email exists).
+
+Refresh / logout body:
+
+```json
+{
+  "refreshToken": "..."
+}
+```
 
 ### Implemented appointment endpoints
 
@@ -211,7 +297,7 @@ Route exists, but this page is still early compared to the appointment list and 
 
 `apps/patient-web` is wired into the workspace and has Nx targets for build, lint, dev, start, and test.
 
-At the moment it is still mostly scaffold/starter content rather than a completed patient booking experience.
+It currently has a clinic booking page at `/book/[bookingId]`. Patient login against `/auth/login` is not wired into this app yet.
 
 ## Shared library responsibilities
 
@@ -247,6 +333,12 @@ Contains shared interfaces and DTOs such as:
 - `ClinicUpdateDto`
 - `AiAppointmentSuggestRequest`
 - `AiAppointmentSuggestResponse`
+- `UserRole`
+- `CreateUserDto`
+- `LoginDto`
+- `RefreshTokenDto`
+- `AuthUser`
+- `AuthLoginResponse`
 - filter/query types
 - store state types
 
@@ -284,6 +376,21 @@ Relations:
 
 - one-to-many with `Appointment`
 - one-to-many with `Availability`
+- one-to-one with `Doctor`
+- one-to-many with `User` (clinic staff logins)
+
+#### `Doctor`
+
+One doctor per clinic (`clinicId` is unique).
+
+Fields:
+
+- `id`
+- `clinicId`
+- `name`
+- `email`
+- `createdAt`
+- `updatedAt`
 
 #### `Appointment`
 
@@ -293,6 +400,8 @@ Fields:
 
 - `id`
 - `clinicId`
+- `doctorId`
+- `patientId` (nullable FK to `User` for logged-in patients)
 - `patientName`
 - `patientEmail`
 - `reason`
@@ -308,6 +417,8 @@ Indexes:
 
 - `@@index([clinicId, startTime])`
 - `@@index([clinicId, status])`
+- `@@index([doctorId])`
+- `@@index([patientId])`
 
 #### `Availability`
 
@@ -333,23 +444,79 @@ Constraint:
 - `CANCELLED`
 - `COMPLETED`
 
+#### `UserRole`
+
+- `SUPER_ADMIN`
+- `CLINIC`
+- `PATIENT`
+
+#### `User`
+
+Login identity for all roles.
+
+Fields:
+
+- `id`
+- `email` (unique)
+- `passwordHash`
+- `name`
+- `role`
+- `isActive`
+- `clinicId` (required for `CLINIC` users; must be null for `SUPER_ADMIN` and `PATIENT`)
+- `createdAt`
+- `updatedAt`
+
+Database check constraint:
+
+- `CLINIC` users must have `clinicId`
+- `SUPER_ADMIN` and `PATIENT` must have `clinicId` null
+
+#### `RefreshToken`
+
+Hashed refresh-token sessions used by login/refresh/logout.
+
+Fields:
+
+- `id` (also used as JWT `jti`)
+- `userId`
+- `tokenHash` (SHA-256 of the refresh JWT)
+- `expiresAt`
+- `revokedAt`
+- `createdAt`
+
 ## Seed data
 
 `apps/api/prisma/seed.ts` currently seeds:
 
 - `10` clinics
+- one doctor per clinic
+- weekday availability for each clinic
 - `1000` appointments per clinic
 - `10,000` appointments total
-- weekday availability for each clinic
+- one `SUPER_ADMIN` user
+- one `CLINIC` user per clinic (email matches the clinic email)
+- five `PATIENT` users
+- appointments linked to those patients via `patientId`
 
-The seeded clinic master data includes:
+The seed password for **all** seeded users is:
 
-- clinic name
-- address
-- email
-- phone number
-- timezone
-- working hours JSON
+```text
+ClinicDesk!23
+```
+
+This password is for local/dev seed data only. Do not use it in production.
+
+| Role               | Email                              |
+| ------------------ | ---------------------------------- |
+| Super admin        | `admin@clinicdesk.com`             |
+| Clinic (Amsterdam) | `amsterdam.central@clinicdesk.com` |
+| Clinic (Rotterdam) | `rotterdam.west@clinicdesk.com`    |
+| Other clinics      | same as each clinic's `email`      |
+| Patient            | `priya.sharma@test.com`            |
+| Patient            | `jan.devries@test.com`             |
+| Patient            | `maria.santos@test.com`            |
+| Patient            | `aiden.chen@test.com`              |
+| Patient            | `sophia.patel@test.com`            |
 
 ## Local development
 
@@ -371,7 +538,11 @@ DATABASE_URL=postgresql://...
 DIRECT_URL=postgresql://...
 GEMINI_API_KEY=your-key
 GEMINI_MODEL=gemini-2.5-flash
+JWT_ACCESS_SECRET=long-random-string
+JWT_REFRESH_SECRET=another-long-random-string
 ```
+
+`JWT_ACCESS_SECRET` is required for login. If `JWT_REFRESH_SECRET` is omitted, the API reuses the access secret.
 
 ### Install dependencies
 
@@ -413,20 +584,25 @@ Typical URL:
 
 ## Database workflow
 
-If you change Prisma schema:
+Prisma commands are usually run from `apps/api` so `prisma.config.ts` and `apps/api/.env` are picked up.
+
+Apply committed migrations (including `User`, roles, and `RefreshToken`):
 
 ```bash
-npx prisma db push
+cd apps/api
+npx prisma migrate deploy
 npx prisma generate
-```
-
-If you need fresh local seed data:
-
-```bash
 npx prisma db seed
 ```
 
-In this workspace, Prisma commands are usually run from `apps/api` when working with the local Prisma config there.
+If you change Prisma schema locally and want to create a new migration:
+
+```bash
+cd apps/api
+npx prisma migrate dev --name describe_the_change
+```
+
+`migrate deploy` applies SQL already in `apps/api/prisma/migrations`. `db seed` upserts clinics, doctors, users, and appointments.
 
 ## Useful Nx commands
 
@@ -480,6 +656,6 @@ npx nx build clinic-dashboard
 
 ## Current project summary
 
-ClinicDesk today is no longer just a starter Nx workspace. The backend supports appointments, clinic master data, and AI-assisted suggestions; the Angular dashboard now supports list, detail, create, and update flows for appointments; and the seed data is scaled to a realistic multi-clinic setup with `10,000` appointments.
+ClinicDesk today is no longer just a starter Nx workspace. The backend supports appointments, clinic master data, doctors, AI-assisted suggestions, and role-based login (`SUPER_ADMIN`, `CLINIC`, `PATIENT`) with JWT access and refresh tokens. The Angular dashboard supports list, detail, create, and update flows for appointments. Seed data includes `10` clinics, `10,000` appointments, and login users for each role.
 
-The patient-facing Next.js app is still the least developed part of the repository and should be treated as future-facing scaffolding for now.
+JWT authorization on appointment and clinic routes, and patient-web login, are the next pieces of this work.

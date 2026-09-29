@@ -3,19 +3,164 @@ info:
   title: ClinicDesk API
   version: 1.0.0
   description: |
-    HTTP API for clinics, doctors, and appointments.
+    HTTP API for clinics, doctors, appointments, and role-based auth.
     Each clinic has one doctor. Creating an appointment attaches that clinic's doctor.
+
+    Roles: `SUPER_ADMIN`, `CLINIC` (one clinic via clinicId), `PATIENT`.
+    `POST /auth/register` always creates a PATIENT.
+    Login returns JWT `accessToken` (15 minutes) and `refreshToken` (7 days).
+    Bearer auth is issued today; appointment and clinic routes are not JWT-guarded yet.
 servers:
   - url: http://localhost:3333
     description: Local API
 
 tags:
+  - name: Auth
   - name: Clinics
   - name: Doctors
   - name: Appointments
   - name: AI
 
 paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a patient
+      description: Always creates a PATIENT. `role` and `clinicId` in the body are ignored.
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              email: new.patient@test.com
+              password: ClinicDesk!23
+              name: New Patient
+      responses:
+        '201':
+          description: Created patient user (no password hash).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/createUser:
+    post:
+      tags: [Auth]
+      summary: Create a user
+      description: |
+        Creates a user with an explicit role. Defaults to PATIENT when role is omitted.
+        CLINIC users must send a valid `clinicId`. SUPER_ADMIN and PATIENT must not send `clinicId`.
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: Created user (no password hash).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in
+      description: |
+        Returns a public user plus JWT access and refresh tokens.
+        Invalid email, invalid password, and inactive users all return 401
+        with `Invalid email or password`.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: priya.sharma@test.com
+              password: ClinicDesk!23
+      responses:
+        '201':
+          description: Authenticated session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthLoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh tokens
+      description: Verifies the refresh token, revokes it, and issues a new access/refresh pair.
+      operationId: refresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '201':
+          description: New authenticated session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthLoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out
+      description: Revokes the supplied refresh token. Already-invalid tokens still return success.
+      operationId: logout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '201':
+          description: Refresh token revoked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+
+  /auth/user/{id}:
+    get:
+      tags: [Auth]
+      summary: Get a user
+      operationId: getUser
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Public user (no password hash).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /clinics:
     get:
       tags: [Clinics]
@@ -340,10 +485,41 @@ components:
       schema:
         type: string
       description: Case-insensitive match on clinic name, address, email, or phone number.
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token from POST /auth/login. Not required on other routes yet.
 
   responses:
     NotFound:
       description: The record was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: The request body is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Invalid credentials or refresh token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Email is already registered.
       content:
         application/json:
           schema:
@@ -353,6 +529,10 @@ components:
     AppStatus:
       type: string
       enum: [PENDING, CONFIRMED, CANCELLED, COMPLETED]
+
+    UserRole:
+      type: string
+      enum: [SUPER_ADMIN, CLINIC, PATIENT]
 
     Error:
       type: object
@@ -479,6 +659,10 @@ components:
           type: string
         doctorId:
           type: string
+        patientId:
+          type: string
+          nullable: true
+          description: Linked User id when the patient is a registered user.
         patientName:
           type: string
         patientEmail:
@@ -600,3 +784,91 @@ components:
         confidence:
           type: string
           enum: [low, medium, high]
+
+    RegisterRequest:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        name:
+          type: string
+
+    CreateUserRequest:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        clinicId:
+          type: string
+          description: Required when role is CLINIC.
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        clinicId:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+
+    AuthLoginResponse:
+      type: object
+      required: [user, accessToken, refreshToken]
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthUser'
+        accessToken:
+          type: string
+          description: JWT, 15 minutes. Use as Authorization Bearer token.
+        refreshToken:
+          type: string
+          description: JWT, 7 days. Send to /auth/refresh or /auth/logout.
+
+    LogoutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+
