@@ -6,10 +6,9 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import { createHash, randomUUID, timingSafeEqual } from 'crypto';
 import bcrypt from 'bcryptjs';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import { User } from '@prisma/client';
 import {
   AuthLoginResponse,
@@ -25,7 +24,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 const ACCESS_TOKEN_EXPIRES_SEC = 15 * 60;
 const REFRESH_TOKEN_EXPIRES_SEC = 7 * 24 * 60 * 60;
 
-
 @Injectable()
 export class AuthService {
   private readonly accessSecret: string;
@@ -34,16 +32,11 @@ export class AuthService {
   constructor(
     @Inject(PrismaService)
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
-    private readonly config: ConfigService,
   ) {
     this.accessSecret =
-      this.config.get<string>('JWT_ACCESS_SECRET') ??
-      this.config.get<string>('JWT_SECRET') ??
-      '';
+      process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET ?? '';
     this.refreshSecret =
-      this.config.get<string>('JWT_REFRESH_SECRET') ??
-      this.accessSecret;
+      process.env.JWT_REFRESH_SECRET ?? this.accessSecret;
 
     if (!this.accessSecret) {
       throw new Error(
@@ -201,7 +194,7 @@ export class AuthService {
    * Issues a JWT access token and stores a hashed refresh token for the authenticated user session.
    */
   private async issueAuthSession(user: User): Promise<AuthLoginResponse> {
-    const accessToken = await this.jwtService.signAsync(
+    const accessToken = jwt.sign(
       {
         sub: user.id,
         email: user.email,
@@ -209,20 +202,18 @@ export class AuthService {
         clinicId: user.clinicId,
         type: 'access',
       } satisfies AccessTokenPayload,
-      {
-        secret: this.accessSecret,
-        expiresIn: ACCESS_TOKEN_EXPIRES_SEC,
-      },
+      this.accessSecret,
+      { expiresIn: ACCESS_TOKEN_EXPIRES_SEC },
     );
 
     const refreshTokenId = randomUUID();
-    const refreshToken = await this.jwtService.signAsync(
+    const refreshToken = jwt.sign(
       {
         sub: user.id,
         type: 'refresh',
       } satisfies RefreshTokenPayload,
+      this.refreshSecret,
       {
-        secret: this.refreshSecret,
         expiresIn: REFRESH_TOKEN_EXPIRES_SEC,
         jwtid: refreshTokenId,
       },
@@ -251,9 +242,8 @@ export class AuthService {
     refreshToken: string,
   ): Promise<RefreshTokenPayload & { jti: string }> {
     try {
-      const payload = await this.jwtService.verifyAsync<
-        RefreshTokenPayload & { jti?: string }
-      >(refreshToken, { secret: this.refreshSecret });
+      const payload = jwt.verify(refreshToken, this.refreshSecret) as JwtPayload &
+        RefreshTokenPayload & { jti?: string };
 
       if (payload.type !== 'refresh' || !payload.jti || !payload.sub) {
         throw new UnauthorizedException('Invalid refresh token');
