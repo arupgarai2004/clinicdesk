@@ -1,4 +1,4 @@
-import { AuthLoginResponse, AuthUser, CreateUserDto, LoginDto } from '@org/models';
+import { AuthUser, CreateUserDto, LoginDto } from '@org/models';
 
 export const registerUser = async (userData: CreateUserDto): Promise<AuthUser> => {
   const response = await fetch('/api/auth/register', {
@@ -16,9 +16,10 @@ export const registerUser = async (userData: CreateUserDto): Promise<AuthUser> =
   return response.json();
 };
 
-export const loginUser = async (credentials: LoginDto): Promise<AuthLoginResponse> => {
+export const loginUser = async (credentials: LoginDto): Promise<{ user: AuthUser }> => {
   const response = await fetch('/api/auth/login', {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },

@@ -4,8 +4,6 @@ import React from 'react';
 import styles from '../page.module.scss';
 import { loginUser } from '../../lib/api-auth';
 import { useRouter } from 'next/navigation';
-import { AuthLoginResponse } from 'libs/shared/models/src/lib/auth.type';
-import { NextResponse } from 'next/server';
 
 export default function LoginForm() {
     const [email, setEmail] = React.useState('');
@@ -13,37 +11,14 @@ export default function LoginForm() {
     const [errors, setErrors] = React.useState<{ [key: string]: string }>({});
     const router = useRouter();
 
-    
     const validateEmail = (email: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
-    }
-
-    const manageSession = (tokenDetail: AuthLoginResponse) => {
-        // Store the token in localStorage or cookies
-        const res = NextResponse.json({
-      message: "Login successful",
-    });
-    res.cookies.set("access_token", tokenDetail.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60, // 1 hour
-    });
-    res.cookies.set("refresh_token", tokenDetail.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",              
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
-
- }
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const errorMessages: { [key: string]: string } = {}
+        const errorMessages: { [key: string]: string } = {};
         if (!email) {
             errorMessages.email = 'Email is required';
         } else if (!validateEmail(email)) {
@@ -52,18 +27,17 @@ export default function LoginForm() {
         if (!password) {
             errorMessages.password = 'Password is required';
         }
-        // Handle form submission logic here
         if (Object.keys(errorMessages).length === 0) {
             try {
-               const tokenDetail = await loginUser({ email, password });
-                manageSession(tokenDetail);
-               router.push('/');
+                await loginUser({ email, password });
+                router.push('/');
+                router.refresh();
             } catch (error) {
                 errorMessages.login = error instanceof Error ? error.message : 'Failed to login user';
             }
         }
         setErrors(errorMessages);
-    }
+    };
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
         <div className={styles.field}>
