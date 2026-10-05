@@ -20,6 +20,7 @@ export interface AuthUser {
 export interface LoginDto {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface RefreshTokenDto {

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 export default function LoginForm() {
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
+    const [rememberMe, setRememberMe] = React.useState(false);
     const [errors, setErrors] = React.useState<{ [key: string]: string }>({});
     const router = useRouter();
 
@@ -29,7 +30,7 @@ export default function LoginForm() {
         }
         if (Object.keys(errorMessages).length === 0) {
             try {
-                await loginUser({ email, password });
+                await loginUser({ email, password, rememberMe});
                 router.push('/');
                 router.refresh();
             } catch (error) {
@@ -48,25 +49,27 @@ export default function LoginForm() {
           Email
         </label>
         <input className={styles.input} type="email" id="email" name="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        {errors.email && <div className={styles.error}>{errors.email}</div>}
       </div>
       <div className={styles.field}>
         <label className={styles.label} htmlFor="password">
           Password
         </label>
         <input className={styles.input} type="password" id="password" name="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+        {errors.password && <div className={styles.error}>{errors.password}</div>}
       </div>
       <div className={styles.field}>
         <label className={styles.label} htmlFor="remember">
-          <input className={styles.checkbox} type="checkbox" id="remember" name="remember" />
+          <input className={styles.checkbox} type="checkbox" id="remember" name="remember" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
           Remember me
         </label>
          <button type="submit"  className={styles['book-appointment']}>Login</button>
       </div>
-      <div className={styles.field}>
+      {/* <div className={styles.field}>
         <a href="/forgot-password" className={styles['forgot-password']}>
           Forgot password?
         </a>
-      </div>
+      </div> */}
       <div className={styles.field}>
         <a href="/register" className={styles['register-link']}>
           Don't have an account? Register

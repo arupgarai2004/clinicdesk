@@ -17,5 +17,9 @@ export async function POST(request: Request) {
   }
 
   const response = NextResponse.json({ user: data.user });
-  return setAuthCookies(response, data);
+  if(typeof data.accessToken === 'string' && typeof data.refreshToken === 'string') { 
+    return setAuthCookies(response, data, { rememberMe: body.rememberMe });
+  } else {
+    return NextResponse.json({ message: 'Invalid token data' }, { status: 500 });
+  }
 }

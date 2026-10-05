@@ -12,10 +12,13 @@ const cookieOptions = {
 export function setAuthCookies(
   response: NextResponse,
   tokenDetail: AuthLoginResponse,
+  { rememberMe }: { rememberMe?: boolean }
 ) {
+  const rememerMe = rememberMe ?? false;
+  const maxAge = rememerMe ? 60 * 60 * 24 * 7 : 60 * 15; // 7 days or 15 minutes
   response.cookies.set('access_token', tokenDetail.accessToken, {
     ...cookieOptions,
-    maxAge: 60 * 60,
+    maxAge,
   });
   response.cookies.set('refresh_token', tokenDetail.refreshToken, {
     ...cookieOptions,
